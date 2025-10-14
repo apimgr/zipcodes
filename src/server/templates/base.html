@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{.Description | default "US Zipcode Lookup API"}}">
+    <title>{{.Title}} - Zipcodes</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+</head>
+<body data-theme="{{.User.Theme | default "dark"}}">
+    <header id="main-header">
+        <div class="header-container">
+            <div class="header-left">
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+                <a class="logo" href="/">📮 Zipcodes</a>
+            </div>
+            <nav id="main-nav" class="header-center">
+                {{if .User}}
+                    {{if eq .User.Role "administrator"}}
+                        <a href="/admin">Admin</a>
+                        <a href="/admin/users">Users</a>
+                        <a href="/admin/settings">Settings</a>
+                    {{else}}
+                        <a href="/user">Dashboard</a>
+                        <a href="/user/profile">Profile</a>
+                    {{end}}
+                {{else}}
+                    <a href="/">Search</a>
+                    <a href="/api/docs">API Docs</a>
+                {{end}}
+            </nav>
+            <div class="header-right">
+                {{if .User}}
+                    <div class="notification-dropdown">
+                        <button class="notification-bell" data-count="0">
+                            🔔<span class="notification-badge">0</span>
+                        </button>
+                    </div>
+                    <div class="profile-dropdown">
+                        <button class="profile-toggle" id="profile-toggle">
+                            {{if .User.AvatarURL}}
+                                <img class="profile-avatar" src="{{.User.AvatarURL}}" alt="{{.User.DisplayName}}">
+                            {{else}}
+                                <div class="profile-avatar-initials">{{.User.DisplayName | slice 0 1}}</div>
+                            {{end}}
+                            <span class="profile-name">{{.User.DisplayName}}</span>
+                            <span class="caret">▼</span>
+                        </button>
+                        <div class="profile-menu" id="profile-menu" style="display: none;">
+                            <div class="profile-menu-header">
+                                <div class="profile-menu-name">{{.User.DisplayName}}</div>
+                                <div class="profile-menu-email">{{.User.Email}}</div>
+                            </div>
+                            {{if eq .User.Role "administrator"}}
+                                <a href="/admin" class="profile-menu-item">⚙️ Admin Dashboard</a>
+                            {{else}}
+                                <a href="/user" class="profile-menu-item">📊 Dashboard</a>
+                                <a href="/user/profile" class="profile-menu-item">👤 Profile</a>
+                                <a href="/user/settings" class="profile-menu-item">⚙️ Settings</a>
+                                <a href="/user/sessions" class="profile-menu-item">🔒 Sessions</a>
+                            {{end}}
+                            <hr class="profile-menu-divider">
+                            <a href="/auth/logout" class="profile-menu-item">🚪 Logout</a>
+                        </div>
+                    </div>
+                {{else}}
+                    <a href="/auth/login" class="btn btn-primary">Login</a>
+                {{end}}
+                <button id="theme-toggle" class="btn-icon" aria-label="Toggle theme">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content">
+        {{if .Error}}
+        <div class="alert alert-error">
+            <div class="alert-icon">❌</div>
+            <div class="alert-content">
+                <div class="alert-message">{{.Error}}</div>
+            </div>
+            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {{end}}
+
+        {{if .Success}}
+        <div class="alert alert-success">
+            <div class="alert-icon">✅</div>
+            <div class="alert-content">
+                <div class="alert-message">{{.Success}}</div>
+            </div>
+            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+        </div>
+        {{end}}
+
+        {{block "content" .}}{{end}}
+    </main>
+
+    <footer id="main-footer">
+        <p>&copy; 2025 Zipcodes. All rights reserved.</p>
+        <p><a href="/healthz">System Status</a> | <a href="/api/v1/zipcode/stats">Stats</a></p>
+    </footer>
+
+    <div id="modal-container"></div>
+    <div id="toast-container"></div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/ui.js"></script>
+</body>
+</html>

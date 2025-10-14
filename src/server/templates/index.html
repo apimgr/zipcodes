@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Fast and accurate US zipcode lookup and search">
+    <title>Zipcode Lookup - US Postal Code Search</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+</head>
+<body data-theme="dark">
+    <header id="main-header">
+        <div class="header-container">
+            <div class="header-left">
+                <a class="logo" href="/">📮 Zipcode Lookup</a>
+            </div>
+            <nav id="main-nav" class="header-center">
+                <a href="/">Search</a>
+                <a href="/api/docs">API Docs</a>
+            </nav>
+            <div class="header-right">
+                <button id="theme-toggle" class="btn-icon" aria-label="Toggle theme">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <div class="hero">
+            <h1>US Zipcode Lookup</h1>
+            <p class="tagline">Fast and accurate postal code search</p>
+        </div>
+
+        <div class="search-container">
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Enter zipcode, city, or state..."
+                    autocomplete="off"
+                    autofocus
+                />
+                <button id="search-btn" class="btn-primary">Search</button>
+            </div>
+            <div id="autocomplete-results" class="autocomplete-dropdown"></div>
+            <div class="search-examples">
+                <span>Examples:</span>
+                <a href="#" class="example" data-query="94102">94102</a>
+                <a href="#" class="example" data-query="San Francisco">San Francisco</a>
+                <a href="#" class="example" data-query="New York, NY">New York, NY</a>
+                <a href="#" class="example" data-query="TX">Texas</a>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Searching...</p>
+        </div>
+
+        <div id="results" class="results-container" style="display: none;">
+            <div class="results-header">
+                <h2>Results <span id="result-count"></span></h2>
+            </div>
+            <div id="results-list" class="results-list"></div>
+        </div>
+
+        <div id="stats" class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="total-zipcodes">-</div>
+                <div class="stat-label">Total Zipcodes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-states">-</div>
+                <div class="stat-label">States</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-cities">-</div>
+                <div class="stat-label">Cities</div>
+            </div>
+        </div>
+
+        <div class="api-info">
+            <h3>API Endpoints</h3>
+            <div class="endpoint-list">
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcodes.json</code>
+                    <p>Download complete dataset (340K+ records, 6.3MB)</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcode/search?q={query}</code>
+                    <p>Search by zipcode, city, or state</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcode/{code}</code>
+                    <p>Get specific zipcode details</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcode/city/{city}</code>
+                    <p>Get all zipcodes for a city</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcode/state/{state}</code>
+                    <p>Get zipcodes for a state</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcode/autocomplete?q={query}</code>
+                    <p>Get autocomplete suggestions</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="main-footer">
+        <p>&copy; 2025 Zipcode Lookup. All rights reserved.</p>
+        <p>Data updated regularly. <a href="/api/v1/zipcode/stats">View Stats</a></p>
+    </footer>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
