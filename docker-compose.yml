@@ -1,0 +1,41 @@
+services:
+  zipcodes:
+    image: ghcr.io/apimgr/zipcodes:latest
+    container_name: zipcodes
+    restart: unless-stopped
+
+    environment:
+      - CONFIG_DIR=/config
+      - DATA_DIR=/data
+      - LOGS_DIR=/logs
+      - PORT=80
+      - ADDRESS=0.0.0.0
+      - DB_PATH=/data/db/zipcodes.db
+      # Uncomment and set for first deployment
+      #- ADMIN_USER=administrator
+      #- ADMIN_PASSWORD=changeme
+      #- ADMIN_TOKEN=your-token-here
+
+    volumes:
+      - ./rootfs/config/zipcodes:/config
+      - ./rootfs/data/zipcodes:/data
+      - ./rootfs/logs/zipcodes:/logs
+
+    ports:
+      - "172.17.0.1:64080:80"
+
+    networks:
+      - zipcodes
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/zipcodes", "--status"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  zipcodes:
+    name: zipcodes
+    driver: bridge
+    external: false

@@ -1,0 +1,61 @@
+{{define "content"}}
+<div class="admin-database">
+    <h1>{{.PageTitle}}</h1>
+
+    <div class="card">
+        <h2>Database Connection</h2>
+        <button id="test-connection" class="btn-primary">Test Connection</button>
+        <div id="test-result" class="test-result"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('test-connection').addEventListener('click', function() {
+    fetch('/admin/database/test', {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(data => {
+        const result = document.getElementById('test-result');
+        if (data.success) {
+            result.innerHTML = '<span style="color: green;">✓ ' + data.message + '</span>';
+        } else {
+            result.innerHTML = '<span style="color: red;">✗ ' + data.error + '</span>';
+        }
+    });
+});
+</script>
+
+<style>
+.admin-database {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.test-result {
+    margin-top: 1rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    padding: 0.75rem 1.5rem;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: #1565c0;
+}
+</style>
+{{end}}

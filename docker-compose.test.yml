@@ -1,0 +1,61 @@
+# Development/Testing Docker Compose Configuration
+# Uses /tmp for ephemeral storage
+# External port: 64181:80 (random unused port in 64xxx range)
+
+services:
+  zipcodes:
+    image: zipcodes:dev
+    container_name: zipcodes-test
+    restart: "no"
+
+    environment:
+      - CONFIG_DIR=/config
+      - DATA_DIR=/data
+      - LOGS_DIR=/logs
+      - PORT=80
+      - ADDRESS=0.0.0.0
+      - DB_PATH=/data/db/zipcodes.db
+      - ADMIN_USER=administrator
+      - ADMIN_PASSWORD=testpass123
+      - DEV=true
+
+    volumes:
+      - /tmp/zipcodes/rootfs/config/zipcodes:/config
+      - /tmp/zipcodes/rootfs/data/zipcodes:/data
+      - /tmp/zipcodes/rootfs/logs/zipcodes:/logs
+
+    ports:
+      - "64181:80"
+
+    networks:
+      - zipcodes
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/zipcodes", "--status"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Optional: PostgreSQL for testing
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: zipcodes-postgres-test
+  #   restart: "no"
+  #
+  #   environment:
+  #     POSTGRES_DB: zipcodes_test
+  #     POSTGRES_USER: zipcodes
+  #     POSTGRES_PASSWORD: testpass
+  #
+  #   volumes:
+  #     - /tmp/zipcodes/rootfs/db/postgres:/var/lib/postgresql/data
+  #
+  #   networks:
+  #     - zipcodes
+
+networks:
+  zipcodes:
+    name: zipcodes
+    external: false
+    driver: bridge

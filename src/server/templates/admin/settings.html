@@ -1,0 +1,129 @@
+{{define "content"}}
+<div class="admin-settings">
+    <h1>{{.PageTitle}}</h1>
+
+    <form method="POST" action="/admin/settings">
+        <div class="settings-section">
+            <h2>Server Settings</h2>
+            
+            <div class="form-group">
+                <label for="server.title">Server Title</label>
+                <input type="text" id="server.title" name="server.title" value="{{index .Settings "server.title"}}" />
+            </div>
+
+            <div class="form-group">
+                <label for="server.tagline">Tagline</label>
+                <input type="text" id="server.tagline" name="server.tagline" value="{{index .Settings "server.tagline"}}" />
+            </div>
+
+            <div class="form-group">
+                <label for="server.description">Description</label>
+                <textarea id="server.description" name="server.description" rows="3">{{index .Settings "server.description"}}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="server.timezone">Timezone</label>
+                <input type="text" id="server.timezone" name="server.timezone" value="{{index .Settings "server.timezone"}}" />
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Feature Settings</h2>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" name="features.api_enabled" {{if eq (index .Settings "features.api_enabled") "true"}}checked{{end}} />
+                    Enable API Endpoints
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Settings</button>
+            <a href="/admin" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.admin-settings {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.settings-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.settings-section h2 {
+    margin-top: 0;
+    font-size: 1.25rem;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 0.5rem;
+}
+
+.form-group {
+    margin: 1rem 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #555;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+.form-group input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary {
+    background: #1976d2;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1565c0;
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #ccc;
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+}
+</style>
+{{end}}

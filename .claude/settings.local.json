@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(find:*)",
+      "Bash(go get:*)",
+      "Bash(./binaries/zipcodes:*)",
+      "Bash(cat:*)",
+      "Bash(make:*)",
+      "Bash(./binaries/zipcodes-linux-amd64:*)",
+      "Bash(awk:*)",
+      "Bash(ldd:*)",
+      "Read(//root/Projects/github/apimgr/airports/**)",
+      "Read(//root/Projects/github/apimgr/**)",
+      "Bash(PORT=80 ./binaries/zipcodes:*)",
+      "Bash(GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build:*)",
+      "Bash(./binaries/zipcodes-final:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
