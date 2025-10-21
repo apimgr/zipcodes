@@ -1,25 +1,69 @@
 {
+  "model": "sonnet[1m]",
   "permissions": {
     "allow": [
+      "Read(**)",
+      "Write(**)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
       "Bash(mkdir:*)",
       "Bash(tree:*)",
-      "Bash(go mod:*)",
-      "Bash(go build:*)",
-      "Bash(find:*)",
-      "Bash(go get:*)",
-      "Bash(./binaries/zipcodes:*)",
-      "Bash(cat:*)",
+      "Bash(go:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(echo:*)",
       "Bash(make:*)",
-      "Bash(./binaries/zipcodes-linux-amd64:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
       "Bash(awk:*)",
-      "Bash(ldd:*)",
-      "Read(//root/Projects/github/apimgr/airports/**)",
-      "Read(//root/Projects/github/apimgr/**)",
-      "Bash(PORT=80 ./binaries/zipcodes:*)",
-      "Bash(GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build:*)",
-      "Bash(./binaries/zipcodes-final:*)"
+      "Bash(sed:*)",
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(incus:*)",
+      "Bash(git:*)",
+      "Bash(pkill:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(cp:*)",
+      "Bash(ls:*)",
+      "Bash(pwd:*)",
+      "Bash(cd:*)",
+      "Bash(head:*)",
+      "Bash(timeout:*)",
+      "Bash(do:*)",
+      "Bash(ln:*)",
+      "Bash(test:*)",
+      "Bash(do)",
+      "Bash(sort:*)",
+      "Bash(paste:*)",
+      "Bash(*:*)"
     ],
-    "deny": [],
+    "deny": [
+      "Bash(git commit:*)"
+    ],
     "ask": []
+  },
+  "preferences": {
+    "auto_commit": false
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write(**)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if grep -qi 'anthropic\\|claude' \"$file\" 2>/dev/null; then echo 'Error: File contains vendor names (Anthropic/Claude)' >&2; exit 1; fi"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "MAX_THINKING_TOKENS": "1000"
   }
 }
+

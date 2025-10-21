@@ -60,7 +60,7 @@ jobs:
             type=sha,prefix={{branch}}-
           labels: |
             org.opencontainers.image.title=Zipcodes API Server
-            org.opencontainers.image.description=Global airport location information API with GeoIP integration
+            org.opencontainers.image.description=US Postal Code Lookup API with GeoIP support - Single static binary
             org.opencontainers.image.vendor=apimgr
             org.opencontainers.image.licenses=MIT
 

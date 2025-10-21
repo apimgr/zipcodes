@@ -4,7 +4,7 @@
 **Module**: github.com/apimgr/zipcodes
 **Language**: Go 1.24+
 **Purpose**: Public US postal code API with admin-protected server configuration
-**Data**: 340,000+ US ZIP codes (embedded), GeoIP databases (sapics/ip-location-db)
+**Data**: 340,000+ US ZIP codes (embedded), GeoIP databases (sapics/ip-location-db via jsdelivr CDN)
 
 ---
 
@@ -20,6 +20,9 @@
 8. [Build & Deployment](#build--deployment)
 9. [Development](#development)
 10. [Testing](#testing)
+11. [Performance](#performance)
+12. [Security](#security)
+13. [License](#license)
 
 ---
 
@@ -31,7 +34,8 @@ A **public US ZIP code information API** with a web frontend, built as a single 
 
 - **Public API**: All ZIP code data is freely accessible (no authentication)
 - **Admin Interface**: Server configuration protected by token/password authentication
-- **Embedded Data**: zipcodes.json (6.6MB) built into binary, GeoIP databases auto-downloaded (~103MB)
+- **Embedded Data**: zipcodes.json (6.4MB) built into binary
+- **External GeoIP**: ~103MB GeoIP databases auto-downloaded on first run
 - **Fast Search**: In-memory SQLite database with indexes for instant lookups
 - **Geographic Queries**: Search by coordinates, city, state, county
 - **Web Frontend**: Go html/template based UI with dark theme
@@ -41,11 +45,34 @@ A **public US ZIP code information API** with a web frontend, built as a single 
 
 - Search by ZIP code, city, state, county, prefix
 - Find ZIP codes near coordinates
-- GeoIP lookup (find ZIP codes near IP address)
+- GeoIP lookup (find ZIP codes near IP address) with IPv4/IPv6 support
 - Autocomplete suggestions for cities and states
 - RESTful API with matching web/API routes
 - Admin dashboard for server configuration
-- Single binary deployment (9.4MB binary + auto-downloaded GeoIP databases)
+- Single binary deployment (~16MB with embedded data)
+- Multi-platform support (Linux, macOS, Windows, FreeBSD × amd64/arm64)
+
+### Binary Characteristics
+
+```yaml
+Binary Size: ~16MB (static binary with CGO disabled)
+Embedded Assets:
+  - zipcodes.json: 6.4MB (340,000+ records)
+  - HTML templates
+  - CSS/JS/Images
+  - Static files
+
+External Assets (auto-downloaded):
+  - GeoIP databases: ~103MB total
+  - Downloaded from jsdelivr CDN on first run
+  - Stored in DATA_DIR/geoip/
+
+Total Runtime Footprint:
+  - Binary: 16MB
+  - SQLite DB: ~15MB (generated from embedded JSON)
+  - GeoIP: ~103MB (optional, auto-downloaded)
+  - Memory: ~50MB baseline, ~150MB with GeoIP
+```
 
 ---
 
@@ -55,15 +82,15 @@ A **public US ZIP code information API** with a web frontend, built as a single 
 
 ```
 ┌─────────────────────────────────────────┐
-│     Single Static Go Binary (9.4MB)     │
+│         Single Go Binary (~16MB)        │
 │  ┌─────────────────────────────────┐   │
 │  │  Embedded Assets (go:embed)     │   │
-│  │  • zipcodes.json (6.6MB)        │   │
+│  │  • zipcodes.json (6.4MB)        │   │
 │  │  • HTML templates               │   │
 │  │  • CSS/JS/Images                │   │
 │  └─────────────────────────────────┘   │
 │  ┌─────────────────────────────────┐   │
-│  │  SQLite Database (Runtime)      │   │
+│  │  SQLite Database (runtime)      │   │
 │  │  • 340,000+ ZIP codes indexed   │   │
 │  │  • Admin credentials (hashed)   │   │
 │  │  • Server settings              │   │
@@ -74,12 +101,17 @@ A **public US ZIP code information API** with a web frontend, built as a single 
 │  │  • Admin routes (auth required) │   │
 │  │  • API v1 endpoints             │   │
 │  └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+            ↓ Auto-downloads on first run
+┌─────────────────────────────────────────┐
+│    External GeoIP Databases (~103MB)    │
 │  ┌─────────────────────────────────┐   │
-│  │  GeoIP Service (Auto-Download)  │   │
-│  │  • sapics/ip-location-db        │   │
-│  │  • IPv4/IPv6 city databases     │   │
-│  │  • Country & ASN databases      │   │
-│  │  • Downloaded from jsdelivr CDN │   │
+│  │  sapics/ip-location-db          │   │
+│  │  (via jsdelivr CDN)             │   │
+│  │  • geolite2-city-ipv4.mmdb      │   │
+│  │  • geolite2-city-ipv6.mmdb      │   │
+│  │  • geo-whois-asn-country.mmdb   │   │
+│  │  • asn.mmdb                     │   │
 │  └─────────────────────────────────┘   │
 └─────────────────────────────────────────┘
 ```
@@ -88,11 +120,24 @@ A **public US ZIP code information API** with a web frontend, built as a single 
 
 - **Language**: Go 1.24+
 - **HTTP Router**: Chi v5
-- **Database**: SQLite (github.com/mattn/go-sqlite3 - CGO enabled)
+- **Database**: SQLite (github.com/mattn/go-sqlite3)
 - **Templates**: Go html/template
 - **GeoIP**: oschwald/geoip2-golang
 - **Embedding**: Go embed.FS
 - **Authentication**: SHA-256 hashing, Bearer tokens, Basic Auth
+
+### Build Configuration
+
+```yaml
+CGO: Disabled (CGO_ENABLED=0)
+Static Binary: Yes
+LDFLAGS: -w -s (strip debug info)
+Platforms:
+  - Linux: amd64, arm64
+  - macOS: amd64, arm64 (Apple Silicon)
+  - Windows: amd64, arm64
+  - FreeBSD: amd64, arm64
+```
 
 ---
 
@@ -105,43 +150,36 @@ Linux/BSD (with root privileges):
   Config:  /etc/zipcodes/
   Data:    /var/lib/zipcodes/
   Logs:    /var/log/zipcodes/
-  Runtime: /run/zipcodes/
 
 Linux/BSD (without root):
   Config:  ~/.config/zipcodes/
   Data:    ~/.local/share/zipcodes/
   Logs:    ~/.local/state/zipcodes/
-  Runtime: ~/.local/run/zipcodes/
 
 macOS (with privileges):
   Config:  /Library/Application Support/Zipcodes/
   Data:    /Library/Application Support/Zipcodes/data/
   Logs:    /Library/Logs/Zipcodes/
-  Runtime: /var/run/zipcodes/
 
 macOS (without privileges):
   Config:  ~/Library/Application Support/Zipcodes/
   Data:    ~/Library/Application Support/Zipcodes/data/
   Logs:    ~/Library/Logs/Zipcodes/
-  Runtime: ~/Library/Application Support/Zipcodes/run/
 
 Windows:
   Config:  C:\ProgramData\Zipcodes\config\
   Data:    C:\ProgramData\Zipcodes\data\
   Logs:    C:\ProgramData\Zipcodes\logs\
-  Runtime: C:\ProgramData\Zipcodes\run\
 
 Windows (user):
-  Config:  %APPDATA%\Zipcodes\config\
-  Data:    %APPDATA%\Zipcodes\data\
-  Logs:    %APPDATA%\Zipcodes\logs\
-  Runtime: %APPDATA%\Zipcodes\run\
+  Config:  %APPDATA%\Zipcodes\
+  Data:    %LOCALAPPDATA%\Zipcodes\
+  Logs:    %LOCALAPPDATA%\Zipcodes\logs\
 
 Docker:
   Config:  /config
   Data:    /data
   Logs:    /logs
-  Runtime: /tmp
 ```
 
 ### Directory Contents
@@ -149,45 +187,38 @@ Docker:
 ```yaml
 Config Directory:
   - admin_credentials     # Generated on first run (0600 permissions)
-  - geoip/               # GeoIP databases (auto-downloaded from jsdelivr CDN)
-    - geolite2-city-ipv4.mmdb
-    - geolite2-city-ipv6.mmdb
-    - geo-whois-asn-country.mmdb
-    - asn.mmdb
 
 Data Directory:
   - zipcodes.db          # SQLite database (340,000+ records)
-  - db/                  # Database storage directory
-    - zipcodes.db        # Can also be at /data/db/zipcodes.db
+  - db/                  # Database storage directory (optional)
+    - zipcodes.db        # Alternative location: /data/db/zipcodes.db
+  - geoip/               # GeoIP databases (auto-downloaded)
+    - geolite2-city-ipv4.mmdb       (~50MB)
+    - geolite2-city-ipv6.mmdb       (~40MB)
+    - geo-whois-asn-country.mmdb    (~8MB)
+    - asn.mmdb                      (~5MB)
 
 Logs Directory:
-  - access.log           # HTTP access logs
-  - error.log            # Application errors
-  - audit.log            # Admin actions
-
-Runtime Directory:
-  - zipcodes.pid         # Process ID file
-  - zipcodes.sock        # Unix socket (optional)
+  - access.log           # HTTP access logs (future)
+  - error.log            # Application errors (future)
+  - audit.log            # Admin actions (future)
 ```
 
 ### Environment Variables & Flags
 
 ```yaml
 Directory Overrides (in priority order):
-  1. Command-line flags
+  1. Command-line flags (highest priority)
   2. Environment variables
-  3. OS defaults
+  3. OS defaults (lowest priority)
 
-Flags:
+Command-line Flags:
   --config DIR        # Configuration directory
   --data DIR          # Data directory
   --logs DIR          # Logs directory
-
   --port PORT         # HTTP port (default: random 64000-64999)
   --address ADDR      # Listen address (default: 0.0.0.0)
-
   --db-path PATH      # SQLite database path
-
   --dev               # Development mode
   --version           # Show version
   --status            # Health check
@@ -197,20 +228,18 @@ Environment Variables:
   CONFIG_DIR          # Configuration directory
   DATA_DIR            # Data directory
   LOGS_DIR            # Logs directory
-
   PORT                # Server port
   ADDRESS             # Listen address
-
   DB_PATH             # SQLite database path
-
   ADMIN_USER          # Admin username (first run only)
   ADMIN_PASSWORD      # Admin password (first run only)
   ADMIN_TOKEN         # Admin API token (first run only)
 
 Docker Environment:
   Mounted volumes:
-    -v ./config:/config
-    -v ./data:/data
+    -v ./rootfs/config/zipcodes:/config
+    -v ./rootfs/data/zipcodes:/data
+    -v ./rootfs/logs/zipcodes:/logs
 
   Environment:
     -e CONFIG_DIR=/config
@@ -227,7 +256,7 @@ Docker Environment:
 │   └── settings.local.json # Claude Code settings
 ├── .github/
 │   └── workflows/
-│       └── build.yml       # GitHub Actions (build on push & monthly)
+│       └── release.yml     # GitHub Actions (build on push & monthly)
 ├── .gitattributes          # Git attributes
 ├── .gitignore              # Git ignore patterns
 ├── .readthedocs.yml        # ReadTheDocs configuration
@@ -238,8 +267,8 @@ Docker Environment:
 ├── go.mod                  # Go module definition
 ├── go.sum                  # Go module checksums
 ├── Jenkinsfile             # CI/CD pipeline (jenkins.casjay.cc)
-├── LICENSE.md              # License file
-├── Makefile                # Build system (4 targets)
+├── LICENSE.md              # MIT License
+├── Makefile                # Build system
 ├── README.md               # User documentation
 ├── release.txt             # Version tracking (auto-increment)
 ├── binaries/               # Built binaries (gitignored)
@@ -252,62 +281,48 @@ Docker Environment:
 │   ├── zipcodes-freebsd-amd64
 │   ├── zipcodes-freebsd-arm64
 │   └── zipcodes            # Host platform binary
-├── releases/                # Release artifacts (gitignored)
+├── releases/               # Release artifacts (gitignored)
 ├── rootfs/                 # Docker volumes (gitignored)
 │   ├── config/
 │   │   └── zipcodes/       # Service config
 │   ├── data/
 │   │   └── zipcodes/       # Service data
-│   ├── logs/
-│   │   └── zipcodes/       # Service logs
-│   └── db/                 # External databases
-│       ├── postgres/
-│       ├── mariadb/
-│       └── redis/
-├── docs/                   # Documentation (ReadTheDocs)
+│   └── logs/
+│       └── zipcodes/       # Service logs
+├── docs/                   # Documentation (MkDocs)
 │   ├── index.md            # Documentation home
-│   ├── API.md              # Complete API reference
-│   ├── SERVER.md           # Server administration guide
-│   ├── README.md           # Documentation index
-│   ├── mkdocs.yml          # MkDocs configuration (Dracula theme)
-│   ├── requirements.txt    # Python dependencies for RTD
-│   ├── stylesheets/
-│   │   └── dracula.css     # Dracula theme CSS
-│   ├── javascripts/
-│   │   └── extra.js        # Custom JavaScript
-│   └── overrides/          # MkDocs theme overrides
+│   └── mkdocs.yml          # MkDocs configuration
 ├── scripts/                # Production scripts (optional)
-│   ├── install.sh          # Installation script
-│   ├── backup.sh           # Backup script
-│   └── uninstall.sh        # Uninstallation script
-├── tests/                  # Test & debug scripts (optional)
-│   ├── test-docker.sh      # Docker testing script
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
-│   └── e2e/                # End-to-end tests
+│   └── install.sh          # Installation helper
+├── tests/                  # Test scripts (optional)
+│   └── test-docker.sh      # Docker testing
 └── src/                    # Source code
     ├── data/
-    │   └── zipcodes.json   # JSON data ONLY (6.6MB, no .go files)
+    │   └── zipcodes.json   # JSON data ONLY (6.4MB, no .go files)
     ├── admin/              # Admin authentication & handlers
     │   ├── middleware.go   # Auth middleware
     │   └── handlers.go     # Admin route handlers
     ├── api/                # API handlers
     │   └── zipcode_handlers.go # ZIP code endpoints
     ├── database/           # Database package
-    │   ├── schema.go       # ZIP code schema
-    │   ├── zipcode.go      # ZIP code CRUD
-    │   └── admin_schema.go # Admin auth schema
+    │   ├── schema.go       # Universal schema (users, sessions, etc.)
+    │   ├── zipcode.go      # ZIP code CRUD operations
+    │   └── admin_schema.go # Admin-only auth schema
     ├── geoip/              # GeoIP service package
     │   ├── geoip.go        # GeoIP lookups
-    │   ├── downloader.go   # Database downloads
+    │   ├── downloader.go   # Database downloads (sapics via jsdelivr)
     │   ├── updater.go      # Auto-updates
     │   └── handlers.go     # GeoIP API handlers
     ├── paths/              # OS path detection
     │   └── paths.go        # OS-specific directory resolution
     ├── utils/              # Utility functions
-    │   └── address.go      # Address utilities
+    │   └── address.go      # Address utilities (GetDisplayAddress)
     ├── server/             # HTTP server package
-    │   └── server.go       # Server setup & routing
+    │   ├── server.go       # Server setup & routing
+    │   ├── docs_handlers.go # OpenAPI/GraphQL handlers
+    │   ├── static/         # Static assets (embedded)
+    │   └── templates/      # HTML templates (embedded)
+    │       └── index.html
     └── main.go             # Entry point
 ```
 
@@ -319,8 +334,9 @@ Docker Environment:
 
 ```yaml
 Location: src/data/zipcodes.json
-Size: 6.6MB
+Size: 6.4MB
 Records: 340,000+ US ZIP codes
+Lines: 341,930
 Loaded: Runtime (embedded, loaded into SQLite)
 Format: JSON array
 
@@ -362,56 +378,48 @@ Query Performance:
 
 ```yaml
 Source: sapics/ip-location-db
-Repository: https://github.com/sapics/ip-location-db
-CDN: https://cdn.jsdelivr.net/npm/@ip-location-db/
-Location: {CONFIG_DIR}/geoip/*.mmdb
+Distribution: jsdelivr CDN (daily updates)
+Location: {DATA_DIR}/geoip/*.mmdb
 Auto-Download: Yes (on first run if missing)
 Total Size: ~103MB
-Update Frequency: Daily (via jsdelivr CDN)
 
 Databases:
   1. geolite2-city-ipv4.mmdb (~50MB)
-     - City-level geolocation for IPv4
-     - Coordinates, timezone, postal codes
-     - MaxMind GeoLite2 data
-     - URL: https://cdn.jsdelivr.net/npm/@ip-location-db/geolite2-city-mmdb/geolite2-city-ipv4.mmdb
+     URL: https://cdn.jsdelivr.net/npm/@ip-location-db/geolite2-city-mmdb/geolite2-city-ipv4.mmdb
+     - IPv4 city-level geolocation
+     - Coordinates, timezone, city names
 
   2. geolite2-city-ipv6.mmdb (~40MB)
-     - City-level geolocation for IPv6
-     - Coordinates, timezone, postal codes
-     - MaxMind GeoLite2 data
-     - URL: https://cdn.jsdelivr.net/npm/@ip-location-db/geolite2-city-mmdb/geolite2-city-ipv6.mmdb
+     URL: https://cdn.jsdelivr.net/npm/@ip-location-db/geolite2-city-mmdb/geolite2-city-ipv6.mmdb
+     - IPv6 city-level geolocation
+     - Coordinates, timezone, city names
 
   3. geo-whois-asn-country.mmdb (~8MB)
-     - Country-level data (combined IPv4/IPv6)
-     - Aggregated from WHOIS and ASN sources
-     - Public domain (CC0/PDDL)
-     - Daily updates
-     - URL: https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country.mmdb
+     URL: https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country.mmdb
+     - Country-level fallback
+     - Combined IPv4/IPv6
 
   4. asn.mmdb (~5MB)
-     - ASN/ISP information (combined IPv4/IPv6)
-     - Autonomous System Numbers
-     - Daily updates
-     - URL: https://cdn.jsdelivr.net/npm/@ip-location-db/asn-mmdb/asn.mmdb
+     URL: https://cdn.jsdelivr.net/npm/@ip-location-db/asn-mmdb/asn.mmdb
+     - ASN information
+     - ISP organization names
 
 Download:
   Auto: On first run (if missing)
-  Manual: Via admin interface (/admin/geoip/update)
-  Source: jsdelivr CDN (daily updates)
-  Timeout: 5 minutes per file
+  Manual: Via admin interface (future)
+  CDN: jsdelivr.net (GitHub-backed, daily updates)
+  Timeout: 300 seconds (5 minutes) per file
+
+Features:
+  - Separate IPv4/IPv6 databases for better performance
+  - Automatic IP version detection
+  - Fallback from city -> country
+  - ASN lookups for ISP information
 
 Update Schedule:
-  - Manual via admin interface
-  - Auto-update available (configurable)
-  - Default: Weekly (Sunday 3:00 AM)
-
-Benefits:
-  - Daily updates (vs weekly from P3TERX)
-  - Separate IPv4/IPv6 databases (optimized performance)
-  - Public domain country data (no attribution required)
-  - Multiple data sources (MaxMind, WHOIS, ASN, GeoFeed)
-  - CDN delivery (fast, global, 99.9% uptime)
+  - Manual via admin interface (future)
+  - Auto-update available (configurable, future)
+  - Daily updates available from CDN
 ```
 
 ---
@@ -422,7 +430,7 @@ Benefits:
 
 This project uses **admin-only authentication** - all ZIP code data is public, only server configuration requires authentication.
 
-**Complete guide**: [docs/SERVER.md](./docs/SERVER.md)
+**No user accounts, no user registration, admin-only access.**
 
 ### Authentication Methods
 
@@ -448,13 +456,13 @@ On first startup:
 
   2. If not, generate:
      - Username: $ADMIN_USER or "administrator"
-     - Password: $ADMIN_PASSWORD or random 16-char
+     - Password: $ADMIN_PASSWORD or random 16-char hex
      - Token: $ADMIN_TOKEN or random 64-char hex
 
   3. Save to database (SHA-256 hashed)
 
   4. Write to {CONFIG_DIR}/admin_credentials (0600)
-     Example: /etc/zipcodes/admin_credentials
+     Example: ~/.config/zipcodes/admin_credentials
 
   5. Display credentials in console output
      ⚠️  Shown once - save securely!
@@ -469,6 +477,7 @@ Credential File Format:
     Password: <password>
 
   API TOKEN:
+    URL:      http://server:port/api/v1/admin
     Header:   Authorization: Bearer <token>
     Token:    <64-char-hex>
 
@@ -481,13 +490,42 @@ Credential File Format:
 ```yaml
 First Run Only (ignored after setup):
   ADMIN_USER=admin            # Default: administrator
-  ADMIN_PASSWORD=secure123    # Default: random 16-char
+  ADMIN_PASSWORD=secure123    # Default: random 16-char hex
   ADMIN_TOKEN=abc123...       # Default: random 64-char hex
 
 After first run:
-  Credentials stored in database
+  Credentials stored in database (SHA-256 hashed)
   Environment variables ignored
-  To reset: delete database
+  To reset: delete database and restart
+```
+
+### Security Implementation
+
+```yaml
+Password Hashing:
+  Algorithm: SHA-256
+  Storage: Hex-encoded hash
+  Function: crypto/sha256
+
+Token Hashing:
+  Algorithm: SHA-256
+  Storage: Hex-encoded hash
+  Function: crypto/sha256
+
+Database Schema:
+  CREATE TABLE admin_credentials (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+Verification:
+  - Compare SHA-256 hash of provided credentials
+  - Single admin account only (id=1)
+  - No user registration
 ```
 
 ---
@@ -496,10 +534,9 @@ After first run:
 
 ### Route Matching Philosophy
 
-**Routes must mirror between web and API:**
+**Routes mirror between web and API:**
 - `/` ↔ `/api/v1`
 - `/zipcode/search` ↔ `/api/v1/zipcode/search`
-- `/docs` ↔ `/api/v1/docs`
 - `/admin` ↔ `/api/v1/admin`
 
 ### Public Routes (No Authentication)
@@ -507,10 +544,10 @@ After first run:
 ```yaml
 Homepage:
   GET  /                      → Home page with search interface
-  GET  /api/v1                → API information JSON
+  GET  /api/v1                → API information JSON (future)
 
 Search:
-  GET  /zipcode/search        → Search page
+  GET  /zipcode/search        → Search page (future)
   GET  /api/v1/zipcode/search → Search ZIP codes (JSON)
     Query params:
       ?q=query               - Search term (ZIP, city, state, prefix)
@@ -521,15 +558,15 @@ Search:
       ?offset=0              - Pagination
 
 ZIP Code Details:
-  GET  /zipcode/:code         → ZIP code detail page
+  GET  /zipcode/:code         → ZIP code detail page (future)
   GET  /api/v1/zipcode/:code  → ZIP code data (JSON)
   GET  /api/v1/zipcode/:code.txt → ZIP code data (plain text)
 
 Location Search:
-  GET  /zipcode/city/:city    → All ZIP codes in city
+  GET  /zipcode/city/:city    → All ZIP codes in city (future)
   GET  /api/v1/zipcode/city/:city → JSON
 
-  GET  /zipcode/state/:state  → All ZIP codes in state
+  GET  /zipcode/state/:state  → All ZIP codes in state (future)
   GET  /api/v1/zipcode/state/:state → JSON
 
 Autocomplete:
@@ -539,7 +576,7 @@ Autocomplete:
       ?limit=10              - Max suggestions (default: 10, max: 50)
 
 Statistics:
-  GET  /zipcode/stats         → Stats page
+  GET  /zipcode/stats         → Stats page (future)
   GET  /api/v1/zipcode/stats  → Database statistics (JSON)
     Returns:
       - Total ZIP codes
@@ -547,25 +584,29 @@ Statistics:
       - Cities count
 
 GeoIP:
-  GET  /geoip                 → GeoIP lookup page
+  GET  /geoip                 → GeoIP lookup page (future)
   GET  /api/v1/geoip          → Lookup request IP (JSON)
   GET  /api/v1/geoip.txt      → Lookup request IP (plain text)
   GET  /api/v1/geoip?ip=1.2.3.4 → Lookup specific IP (JSON)
   POST /api/v1/geoip/batch    → Batch lookup (max 100 IPs)
 
 Export:
-  GET  /api/v1/zipcodes.json  → Full database JSON (6.6MB)
+  GET  /api/v1/zipcodes.json  → Full database JSON (6.4MB, embedded file)
 
 Documentation:
-  GET  /docs                  → API documentation page
+  GET  /openapi               → OpenAPI/Swagger UI (future)
+  GET  /graphql               → GraphQL Playground (future)
+  GET  /api/v1/openapi        → OpenAPI spec (future)
+  GET  /api/v1/openapi.json   → OpenAPI JSON spec (future)
+  GET  /api/v1/graphql        → GraphQL endpoint (future)
+  POST /api/v1/graphql        → GraphQL queries (future)
 
 Health:
   GET  /healthz               → Health check (JSON)
+  GET  /api/v1/health         → Health check (JSON)
 
 Static Assets:
   GET  /static/*              → CSS, JS, images (embedded)
-  GET  /favicon.ico           → Favicon
-  GET  /robots.txt            → Robots file
 ```
 
 ### Admin Routes (Authentication Required)
@@ -576,31 +617,24 @@ Dashboard:
   GET  /api/v1/admin          → Admin info (Bearer Token)
 
 Settings:
-  GET  /admin/settings        → Settings page
-  POST /admin/settings        → Update settings
-  GET  /api/v1/admin/settings → Get all settings (JSON)
-  PUT  /api/v1/admin/settings → Update settings (JSON)
+  GET  /admin/settings        → Settings page (Basic Auth)
+  POST /admin/settings        → Update settings (Basic Auth)
+  GET  /api/v1/admin/settings → Get all settings (Bearer Token)
+  PUT  /api/v1/admin/settings → Update settings (Bearer Token)
 
 Database:
-  GET  /admin/database        → Database management page
-  POST /admin/database/rebuild → Rebuild database
-  GET  /api/v1/admin/database → Database status (JSON)
-
-GeoIP Management:
-  GET  /admin/geoip           → GeoIP management page
-  POST /admin/geoip/update    → Update GeoIP databases
-  GET  /api/v1/admin/geoip    → GeoIP status (JSON)
-  POST /api/v1/admin/geoip/update → Update databases (JSON)
+  GET  /admin/database        → Database management page (Basic Auth)
+  POST /admin/database/test   → Test database connection (Basic Auth)
 
 Logs:
-  GET  /admin/logs            → Logs viewer page
-  GET  /admin/logs/:type      → View specific log
-  GET  /api/v1/admin/logs     → List available logs (JSON)
-  GET  /api/v1/admin/logs/:type → Get log content (JSON)
+  GET  /admin/logs            → Logs viewer page (Basic Auth)
 
-Health:
-  GET  /admin/health          → Server health page
-  GET  /api/v1/admin/health   → Detailed health (JSON)
+Audit:
+  GET  /admin/audit           → Audit log viewer (Basic Auth)
+
+System:
+  POST /api/v1/admin/reload   → Reload configuration (Bearer Token)
+  GET  /api/v1/admin/stats    → Admin statistics (Bearer Token)
 ```
 
 ### Response Format
@@ -639,7 +673,7 @@ Text Format (.txt endpoints):
 ### Database Schema
 
 ```sql
--- ZIP codes table
+-- ZIP codes table (zipcode data)
 CREATE TABLE IF NOT EXISTS zipcodes (
   zip_code INTEGER PRIMARY KEY,
   city TEXT NOT NULL,
@@ -653,7 +687,7 @@ CREATE INDEX IF NOT EXISTS idx_city ON zipcodes(city);
 CREATE INDEX IF NOT EXISTS idx_state ON zipcodes(state);
 CREATE INDEX IF NOT EXISTS idx_county ON zipcodes(county);
 
--- Admin credentials table
+-- Admin credentials table (admin-only auth)
 CREATE TABLE IF NOT EXISTS admin_credentials (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   username TEXT NOT NULL UNIQUE,
@@ -670,59 +704,123 @@ CREATE TABLE IF NOT EXISTS settings (
   type TEXT NOT NULL CHECK (type IN ('string', 'number', 'boolean', 'json')),
   category TEXT NOT NULL,
   description TEXT,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Audit log table
+CREATE TABLE IF NOT EXISTS audit_log (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  username TEXT,
+  action TEXT NOT NULL,
+  resource TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  ip_address TEXT NOT NULL,
+  user_agent TEXT,
+  success INTEGER NOT NULL,
+  error_message TEXT,
+  timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Scheduled tasks table
+CREATE TABLE IF NOT EXISTS scheduled_tasks (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name TEXT UNIQUE NOT NULL,
+  cron_expression TEXT NOT NULL,
+  command TEXT NOT NULL,
+  enabled INTEGER DEFAULT 1,
+  last_run DATETIME,
+  next_run DATETIME NOT NULL,
+  last_status TEXT,
+  last_error TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Universal schema tables (currently unused, for future extensibility)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  username TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  display_name TEXT,
+  avatar_url TEXT,
+  bio TEXT,
+  role TEXT NOT NULL CHECK (role IN ('administrator', 'user', 'guest')) DEFAULT 'user',
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'pending')),
+  timezone TEXT DEFAULT 'UTC',
+  language TEXT DEFAULT 'en',
+  theme TEXT DEFAULT 'dark',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login DATETIME,
+  failed_login_attempts INTEGER DEFAULT 0,
+  locked_until DATETIME,
+  metadata TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT UNIQUE NOT NULL,
+  ip_address TEXT NOT NULL,
+  user_agent TEXT,
+  device_name TEXT,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_activity DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  remember_me INTEGER DEFAULT 0,
+  is_active INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS tokens (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  last_used DATETIME,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  revoked_at DATETIME
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp);
+CREATE INDEX IF NOT EXISTS idx_settings_category ON settings(category);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_tokens_user_id ON tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_tokens_token_hash ON tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 ```
 
 ### Default Settings
 
 ```yaml
 Server:
-  server.title: "Zipcodes API"
+  server.title: "Zipcodes"
+  server.tagline: "US Postal Code Lookup API"
+  server.description: "Fast and accurate US zipcode lookup API with 340,000+ zipcodes, GeoIP integration, and modern web interface."
   server.address: "0.0.0.0"
-  server.http_port: 64000-64999 (random)
+  server.http_port: 64080 (default in settings, random 64000-64999 at runtime)
   server.https_enabled: false
+  server.timezone: "UTC"
+  server.date_format: "US"
+  server.time_format: "12-hour"
+
+Proxy:
+  proxy.enabled: true
+  proxy.trust_headers: true
+
+Features:
+  features.api_enabled: true
 
 Database:
   db.path: "{DATA_DIR}/zipcodes.db"
-  db.auto_rebuild: false
 
 GeoIP:
   geoip.enabled: true
-  geoip.auto_update: false
-  geoip.update_schedule: "0 3 * * 0" # Sunday 3 AM
-
-Logging:
-  log.level: "info"
-  log.format: "json"
-  log.access: true
-
-Features:
-  features.autocomplete: true
-  features.batch_geoip: true
-  features.export: true
-```
-
-### Modifying Settings
-
-```yaml
-Web UI:
-  1. Navigate to /admin/settings
-  2. Change values in form
-  3. Click Save (applies immediately)
-
-API:
-  PUT /api/v1/admin/settings
-  {
-    "settings": {
-      "server.title": "My ZIP Code API",
-      "geoip.auto_update": true
-    }
-  }
-
-Environment (first run only):
-  DB_PATH=/data/zipcodes.db
-  PORT=8080
+  geoip.auto_update: false (future)
+  geoip.update_schedule: "0 3 * * 0" # Sunday 3 AM (future)
 ```
 
 ---
@@ -760,6 +858,14 @@ Platforms:
   binaries/zipcodes-freebsd-amd64
   binaries/zipcodes-freebsd-arm64
   binaries/zipcodes              # Current platform
+
+Build Flags:
+  CGO_ENABLED=0              # Static binary
+  LDFLAGS:
+    -X main.Version=$(VERSION)
+    -X main.Commit=$(COMMIT)
+    -X main.BuildDate=$(BUILD_DATE)
+    -w -s                    # Strip debug info
 ```
 
 ### Docker
@@ -768,9 +874,7 @@ Platforms:
 Dockerfile:
   Multi-stage build (Go builder → Alpine runtime)
   CGO_ENABLED=0 for static binary
-  Binary Size: 9.4MB static binary
-  Runtime Tools: curl, bash, ca-certificates, tzdata
-  GeoIP Databases: Auto-downloaded (~103MB from jsdelivr CDN)
+  Size: ~16MB binary in ~30MB container
   Health check: /healthz endpoint via --status flag
   Volumes: /config, /data, /logs
   User: 65534:65534 (nobody)
@@ -795,7 +899,7 @@ Production Deployment:
   Volumes mounted to ./rootfs:
     - ./rootfs/config/zipcodes → /config (in container)
     - ./rootfs/data/zipcodes → /data (in container)
-    - ./rootfs/db/sqlite → /data/db (in container)
+    - ./rootfs/logs/zipcodes → /logs (in container)
 
   Default configuration:
     - Internal port: 80 (Docker)
@@ -816,7 +920,6 @@ Production Deployment:
 
   View logs:
     docker-compose logs -f zipcodes
-    cat ./rootfs/logs/zipcodes/access.log
 
   Set admin credentials (first run):
     Edit docker-compose.yml environment:
@@ -830,16 +933,12 @@ Testing/Debugging:
   Uses docker-compose.test.yml with /tmp for ephemeral storage
 
   Test:
-    cd tests
-    ./test-docker.sh
-
-  Or manually:
     docker-compose -f docker-compose.test.yml up -d
 
-  Volumes in /tmp/zipcodes/rootfs (automatically cleaned):
-    - /tmp/zipcodes/rootfs/config/zipcodes → /config
-    - /tmp/zipcodes/rootfs/data/zipcodes → /data
-    - /tmp/zipcodes/rootfs/logs/zipcodes → /logs
+  Volumes in /tmp (automatically cleaned):
+    - /tmp/zipcodes/rootfs/config → /config
+    - /tmp/zipcodes/rootfs/data → /data
+    - /tmp/zipcodes/rootfs/logs → /logs
 
   Access:
     http://localhost:64181         # Test server
@@ -865,9 +964,9 @@ Docker Run (Manual):
   docker run -d \
     --name zipcodes-test \
     -p 127.0.0.1:64181:80 \
-    -v /tmp/zipcodes/rootfs/config/zipcodes:/config \
-    -v /tmp/zipcodes/rootfs/data/zipcodes:/data \
-    -v /tmp/zipcodes/rootfs/db/sqlite:/data/db \
+    -v /tmp/zipcodes/rootfs/config:/config \
+    -v /tmp/zipcodes/rootfs/data:/data \
+    -v /tmp/zipcodes/rootfs/logs:/logs \
     -e PORT=80 \
     -e ADMIN_PASSWORD=testpass \
     ghcr.io/apimgr/zipcodes:latest
@@ -895,12 +994,14 @@ zipcodes
 ### CI/CD
 
 ```yaml
-GitHub Actions (.github/workflows/build.yml):
+GitHub Actions (.github/workflows/release.yml):
   Triggers:
     - Push to main branch
     - Monthly schedule (1st at 3 AM UTC)
+    - Manual workflow dispatch
 
   Actions:
+    - Run tests
     - Build all platform binaries
     - Create multi-arch Docker images (amd64/arm64)
     - Publish to ghcr.io/apimgr/zipcodes
@@ -931,13 +1032,10 @@ ReadTheDocs (.readthedocs.yml):
 
   Build:
     - MkDocs with Material theme
-    - Dracula color scheme
     - Custom CSS/JS
 
   Pages:
     - index.md - Home
-    - API.md - Complete API reference
-    - SERVER.md - Server administration
 ```
 
 ---
@@ -951,19 +1049,12 @@ Enable:
   --dev flag
   OR DEV=true environment variable
 
-Features:
+Features (future):
   - Hot reload templates (no restart)
   - Detailed logging (SQL queries, stack traces)
   - Debug endpoints enabled
   - CORS allow all origins
   - Fast session timeout (5 min)
-
-Debug Endpoints:
-  GET /debug/routes          - List all routes
-  GET /debug/config          - Show configuration
-  GET /debug/db              - Database stats
-  GET /debug/zipcodes        - ZIP code stats
-  POST /debug/reset          - Reset to fresh state
 ```
 
 ### Local Development
@@ -991,7 +1082,7 @@ Initial Load:
   - Creates indexes for fast lookups
   - Takes ~5 seconds for 340,000 records
 
-Rebuild:
+Rebuild (future):
   - Via admin interface: /admin/database
   - Drops and recreates database
   - Reloads from embedded zipcodes.json
@@ -1075,9 +1166,14 @@ Memory:
   With GeoIP: ~150MB
   Peak: ~200MB
 
+Binary:
+  Size: ~16MB (static, stripped)
+  Embedded: ~6.4MB zipcodes.json
+  Total runtime: ~16MB binary + ~15MB DB + ~103MB GeoIP (optional)
+
 Throughput:
   Sequential: 1,000+ req/s
-  Concurrent: 5,000+ req/s (with caching)
+  Concurrent: 5,000+ req/s (future, with caching)
 ```
 
 ---
@@ -1109,13 +1205,29 @@ Database:
   - Tokens hashed with SHA-256
   - SQL injection protection (prepared statements)
   - Input validation on all endpoints
+
+CORS:
+  - Enabled for all origins (public API)
+  - Allow methods: GET, POST, PUT, DELETE, OPTIONS
+  - Allow headers: Content-Type, Authorization
+```
+
+### Security Headers
+
+```yaml
+HTTP Headers:
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Access-Control-Allow-Origin: * (public API)
 ```
 
 ---
 
 ## 📝 License
 
-MIT License - See LICENSE file
+MIT License - See LICENSE.md for details
 
 ### Embedded Data Licenses
 
@@ -1127,16 +1239,26 @@ zipcodes.json:
 
 GeoIP Databases (sapics/ip-location-db):
   Source: https://github.com/sapics/ip-location-db
-  CDN: https://cdn.jsdelivr.net/npm/@ip-location-db/
-  License:
-    - geolite2-city (IPv4/IPv6): CC BY-SA 4.0 (MaxMind GeoLite2)
-    - geo-whois-asn-country: CC0/PDDL (Public domain)
-    - asn: Various open sources
-  Attribution:
-    - MaxMind GeoLite2 (city databases)
-    - Aggregated via sapics/ip-location-db
+  Distribution: jsdelivr CDN
+  License: CC BY-SA 4.0 (database)
+  Attribution: MaxMind GeoLite2 + aggregated sources
+  Updates: Daily via CDN
+
+Go Dependencies:
+  github.com/go-chi/chi/v5: MIT
+  github.com/mattn/go-sqlite3: MIT
+  github.com/oschwald/geoip2-golang: ISC
+  golang.org/x/crypto: BSD-3-Clause
 ```
 
 ---
 
-**Zipcodes API Server v1.0** - A focused, production-ready US postal code information API with admin-only authentication. Built for simplicity, performance, and ease of deployment.
+**Zipcodes API Server v0.0.1** - A focused, production-ready US postal code information API with admin-only authentication. Built for simplicity, performance, and ease of deployment.
+
+**Key Features:**
+- Single 16MB static binary
+- 340,000+ US ZIP codes embedded
+- GeoIP integration (~103MB, auto-downloaded)
+- Admin-only authentication
+- Multi-platform support
+- Production-ready Docker deployment
