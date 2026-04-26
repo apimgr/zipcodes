@@ -6,17 +6,47 @@ import (
 	"fmt"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // Zipcode represents a US zipcode record
 type Zipcode struct {
-	State     string  `json:"state"`
-	City      string  `json:"city"`
-	County    string  `json:"county"`
-	ZipCode   int     `json:"zip_code"`
-	Latitude  string  `json:"latitude"`
-	Longitude string  `json:"longitude"`
+	State     string      `json:"state"`
+	City      string      `json:"city"`
+	County    string      `json:"county"`
+	ZipCode   int         `json:"zip_code"`
+	Latitude  interface{} `json:"latitude"`
+	Longitude interface{} `json:"longitude"`
+}
+
+// GetLatitudeString returns latitude as string
+func (z *Zipcode) GetLatitudeString() string {
+	if z.Latitude == nil {
+		return ""
+	}
+	switch v := z.Latitude.(type) {
+	case string:
+		return v
+	case float64:
+		return fmt.Sprintf("%.6f", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+// GetLongitudeString returns longitude as string
+func (z *Zipcode) GetLongitudeString() string {
+	if z.Longitude == nil {
+		return ""
+	}
+	switch v := z.Longitude.(type) {
+	case string:
+		return v
+	case float64:
+		return fmt.Sprintf("%.6f", v)
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 // DB holds the database connection
@@ -26,7 +56,7 @@ type DB struct {
 
 // Initialize creates and initializes the database
 func Initialize(dbPath string) (*DB, error) {
-	conn, err := sql.Open("sqlite3", dbPath)
+	conn, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -104,7 +134,7 @@ func (db *DB) LoadFromJSON(data []byte) error {
 
 	// Insert data
 	for i, zc := range zipcodes {
-		_, err := stmt.Exec(zc.State, zc.City, zc.County, zc.ZipCode, zc.Latitude, zc.Longitude)
+		_, err := stmt.Exec(zc.State, zc.City, zc.County, zc.ZipCode, zc.GetLatitudeString(), zc.GetLongitudeString())
 		if err != nil {
 			return fmt.Errorf("failed to insert zipcode at index %d: %w", i, err)
 		}
@@ -126,10 +156,11 @@ func (db *DB) LoadFromJSON(data []byte) error {
 // SearchByZipCode finds a zipcode by its code
 func (db *DB) SearchByZipCode(zipCode int) (*Zipcode, error) {
 	var zc Zipcode
+	var lat, lon string
 	err := db.conn.QueryRow(`
 		SELECT state, city, county, zip_code, latitude, longitude
 		FROM zipcodes WHERE zip_code = ?
-	`, zipCode).Scan(&zc.State, &zc.City, &zc.County, &zc.ZipCode, &zc.Latitude, &zc.Longitude)
+	`, zipCode).Scan(&zc.State, &zc.City, &zc.County, &zc.ZipCode, &lat, &lon)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -138,6 +169,8 @@ func (db *DB) SearchByZipCode(zipCode int) (*Zipcode, error) {
 		return nil, err
 	}
 
+	zc.Latitude = lat
+	zc.Longitude = lon
 	return &zc, nil
 }
 
@@ -274,12 +307,33 @@ func (db *DB) scanZipcodes(rows *sql.Rows) ([]Zipcode, error) {
 	var zipcodes []Zipcode
 	for rows.Next() {
 		var zc Zipcode
-		if err := rows.Scan(&zc.State, &zc.City, &zc.County, &zc.ZipCode, &zc.Latitude, &zc.Longitude); err != nil {
+		var lat, lon string
+		if err := rows.Scan(&zc.State, &zc.City, &zc.County, &zc.ZipCode, &lat, &lon); err != nil {
 			return nil, err
 		}
+		zc.Latitude = lat
+		zc.Longitude = lon
 		zipcodes = append(zipcodes, zc)
 	}
 	return zipcodes, rows.Err()
+}
+
+// GetRandom returns a random zipcode
+func (db *DB) GetRandom() (*Zipcode, error) {
+	var zc Zipcode
+	var lat, lon string
+	err := db.conn.QueryRow(`
+		SELECT state, city, county, zip_code, latitude, longitude
+		FROM zipcodes ORDER BY RANDOM() LIMIT 1
+	`).Scan(&zc.State, &zc.City, &zc.County, &zc.ZipCode, &lat, &lon)
+
+	if err != nil {
+		return nil, err
+	}
+
+	zc.Latitude = lat
+	zc.Longitude = lon
+	return &zc, nil
 }
 
 // Close closes the database connection

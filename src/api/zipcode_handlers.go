@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -323,13 +324,81 @@ func formatZipcodeText(zc *database.Zipcode) string {
 		sb.WriteString("\n")
 	}
 
-	if zc.Latitude != "" && zc.Longitude != "" {
+	lat := zc.GetLatitudeString()
+	lon := zc.GetLongitudeString()
+	if lat != "" && lon != "" {
 		sb.WriteString("Coordinates: ")
-		sb.WriteString(zc.Latitude)
+		sb.WriteString(lat)
 		sb.WriteString(", ")
-		sb.WriteString(zc.Longitude)
+		sb.WriteString(lon)
 		sb.WriteString("\n")
 	}
 
 	return sb.String()
+}
+
+// RandomHandler returns a random zipcode
+func RandomHandler(w http.ResponseWriter, r *http.Request) {
+	result, err := db.GetRandom()
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"data":    result,
+	})
+}
+
+// RandomTextHandler returns a random zipcode as plain text
+func RandomTextHandler(w http.ResponseWriter, r *http.Request) {
+	result, err := db.GetRandom()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(formatZipcodeText(result)))
+}
+
+// StatsTextHandler returns stats as plain text
+func StatsTextHandler(w http.ResponseWriter, r *http.Request) {
+	stats, err := db.GetStats()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, "Total Zipcodes: %v\n", stats["total_zipcodes"])
+	fmt.Fprintf(w, "Total States: %v\n", stats["total_states"])
+	fmt.Fprintf(w, "Total Cities: %v\n", stats["total_cities"])
+}
+
+// CountHandler returns the total count of zipcodes
+func CountHandler(w http.ResponseWriter, r *http.Request) {
+	stats, err := db.GetStats()
+	if err != nil {
+		respondError(w, err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"count":   stats["total_zipcodes"],
+	})
+}
+
+// CountTextHandler returns the total count as plain text
+func CountTextHandler(w http.ResponseWriter, r *http.Request) {
+	stats, err := db.GetStats()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, "%v\n", stats["total_zipcodes"])
 }

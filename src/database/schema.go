@@ -170,11 +170,6 @@ func NewAppDB(dbPath string) (*AppDB, error) {
 		return nil, err
 	}
 
-	// Initialize admin-only auth schema on same database
-	if err := InitializeAdminSchema(zipcodeDB.conn); err != nil {
-		return nil, err
-	}
-
 	return &AppDB{
 		DB:   zipcodeDB,
 		conn: zipcodeDB.conn,

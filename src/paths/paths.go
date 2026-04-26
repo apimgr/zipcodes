@@ -2,153 +2,130 @@ package paths
 
 import (
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 )
 
-// GetDefaultDirs returns OS-specific default directories
-func GetDefaultDirs(projectName string) (configDir, dataDir, logsDir string) {
-	// Check if running with root/admin privileges
-	isRoot := false
-	if runtime.GOOS == "windows" {
-		isRoot = os.Getenv("USERDOMAIN") == os.Getenv("COMPUTERNAME")
-	} else {
-		isRoot = os.Geteuid() == 0
+const (
+	// OrgName is the organization name used for directory structure
+	OrgName = "apimgr"
+	// ProjectName is the name of this project
+	ProjectName = "zipcodes"
+)
+
+// GetConfigDir returns the OS-specific configuration directory
+func GetConfigDir(appName string) string {
+	// Check environment variable first
+	if configDir := os.Getenv("CONFIG_DIR"); configDir != "" {
+		return configDir
 	}
 
-	if isRoot {
-		// System-wide installation
-		switch runtime.GOOS {
-		case "windows":
-			programData := os.Getenv("ProgramData")
-			if programData == "" {
-				programData = "C:\\ProgramData"
-			}
-			baseDir := filepath.Join(programData, capitalizeFirst(projectName))
-			configDir = filepath.Join(baseDir, "config")
-			dataDir = filepath.Join(baseDir, "data")
-			logsDir = filepath.Join(baseDir, "logs")
+	var baseDir string
 
-		case "darwin":
-			// macOS system-wide
-			baseDir := filepath.Join("/Library/Application Support", capitalizeFirst(projectName))
-			configDir = baseDir
-			dataDir = filepath.Join(baseDir, "data")
-			logsDir = filepath.Join("/Library/Logs", capitalizeFirst(projectName))
-
-		default:
-			// Linux/BSD system-wide
-			configDir = filepath.Join("/etc", projectName)
-			dataDir = filepath.Join("/var/lib", projectName)
-			logsDir = filepath.Join("/var/log", projectName)
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: %APPDATA%\OrgName\AppName
+		baseDir = os.Getenv("APPDATA")
+		if baseDir == "" {
+			baseDir = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Roaming")
 		}
-	} else {
-		// User-specific installation
-		homeDir := ""
-		currentUser, err := user.Current()
-		if err == nil {
-			homeDir = currentUser.HomeDir
+		return filepath.Join(baseDir, capitalize(OrgName), capitalize(appName))
+
+	case "darwin":
+		// macOS: ~/Library/Application Support/OrgName/AppName
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "Library", "Application Support", capitalize(OrgName), capitalize(appName))
+
+	default:
+		// Linux/Unix: Check if running as root
+		if os.Geteuid() == 0 {
+			// Root user: /etc/orgname/appname
+			return filepath.Join("/etc", OrgName, appName)
 		}
-		if homeDir == "" {
-			homeDir = os.Getenv("HOME")
+		// Regular user: ~/.config/orgname/appname
+		if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
+			return filepath.Join(xdgConfig, OrgName, appName)
 		}
-		if homeDir == "" && runtime.GOOS == "windows" {
-			homeDir = os.Getenv("USERPROFILE")
-		}
-
-		switch runtime.GOOS {
-		case "windows":
-			// Windows user paths
-			appData := os.Getenv("APPDATA")
-			if appData == "" {
-				appData = filepath.Join(homeDir, "AppData", "Roaming")
-			}
-			localAppData := os.Getenv("LOCALAPPDATA")
-			if localAppData == "" {
-				localAppData = filepath.Join(homeDir, "AppData", "Local")
-			}
-
-			configDir = filepath.Join(appData, capitalizeFirst(projectName))
-			dataDir = filepath.Join(localAppData, capitalizeFirst(projectName))
-			logsDir = filepath.Join(localAppData, capitalizeFirst(projectName), "logs")
-
-		case "darwin":
-			// macOS user paths
-			baseDir := filepath.Join(homeDir, "Library", "Application Support", capitalizeFirst(projectName))
-			configDir = baseDir
-			dataDir = filepath.Join(baseDir, "data")
-			logsDir = filepath.Join(homeDir, "Library", "Logs", capitalizeFirst(projectName))
-
-		default:
-			// Linux/BSD user paths (XDG spec)
-			xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
-			if xdgConfigHome == "" {
-				xdgConfigHome = filepath.Join(homeDir, ".config")
-			}
-
-			xdgDataHome := os.Getenv("XDG_DATA_HOME")
-			if xdgDataHome == "" {
-				xdgDataHome = filepath.Join(homeDir, ".local", "share")
-			}
-
-			xdgStateHome := os.Getenv("XDG_STATE_HOME")
-			if xdgStateHome == "" {
-				xdgStateHome = filepath.Join(homeDir, ".local", "state")
-			}
-
-			configDir = filepath.Join(xdgConfigHome, projectName)
-			dataDir = filepath.Join(xdgDataHome, projectName)
-			logsDir = filepath.Join(xdgStateHome, projectName)
-		}
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, ".config", OrgName, appName)
 	}
-
-	return configDir, dataDir, logsDir
 }
 
-// GetDirs returns directories with environment variable and flag overrides
-func GetDirs(projectName, configFlag, dataFlag, logsFlag string) (configDir, dataDir, logsDir string) {
-	// Priority order:
-	// 1. Command-line flags (highest)
-	// 2. Environment variables
-	// 3. OS-specific defaults (lowest)
-
-	configDir, dataDir, logsDir = GetDefaultDirs(projectName)
-
-	// Override with environment variables
-	if envConfig := os.Getenv("CONFIG_DIR"); envConfig != "" {
-		configDir = envConfig
-	}
-	if envData := os.Getenv("DATA_DIR"); envData != "" {
-		dataDir = envData
-	}
-	if envLogs := os.Getenv("LOGS_DIR"); envLogs != "" {
-		logsDir = envLogs
+// GetDataDir returns the OS-specific data directory
+func GetDataDir(appName string) string {
+	// Check environment variable first
+	if dataDir := os.Getenv("DATA_DIR"); dataDir != "" {
+		return dataDir
 	}
 
-	// Override with command-line flags (highest priority)
-	if configFlag != "" {
-		configDir = configFlag
-	}
-	if dataFlag != "" {
-		dataDir = dataFlag
-	}
-	if logsFlag != "" {
-		logsDir = logsFlag
-	}
+	var baseDir string
 
-	return configDir, dataDir, logsDir
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: %LOCALAPPDATA%\OrgName\AppName
+		baseDir = os.Getenv("LOCALAPPDATA")
+		if baseDir == "" {
+			baseDir = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
+		}
+		return filepath.Join(baseDir, capitalize(OrgName), capitalize(appName))
+
+	case "darwin":
+		// macOS: ~/Library/Application Support/OrgName/AppName
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "Library", "Application Support", capitalize(OrgName), capitalize(appName))
+
+	default:
+		// Linux/Unix: Check if running as root
+		if os.Geteuid() == 0 {
+			// Root user: /var/lib/orgname/appname
+			return filepath.Join("/var/lib", OrgName, appName)
+		}
+		// Regular user: ~/.local/share/orgname/appname
+		if xdgData := os.Getenv("XDG_DATA_HOME"); xdgData != "" {
+			return filepath.Join(xdgData, OrgName, appName)
+		}
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, ".local", "share", OrgName, appName)
+	}
 }
 
-// capitalizeFirst capitalizes the first letter of a string
-func capitalizeFirst(s string) string {
+// GetLogsDir returns the OS-specific logs directory
+func GetLogsDir(appName string) string {
+	// Check environment variable first
+	if logsDir := os.Getenv("LOGS_DIR"); logsDir != "" {
+		return logsDir
+	}
+
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: %LOCALAPPDATA%\OrgName\AppName\logs
+		return filepath.Join(GetDataDir(appName), "logs")
+
+	case "darwin":
+		// macOS: ~/Library/Logs/OrgName/AppName
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "Library", "Logs", capitalize(OrgName), capitalize(appName))
+
+	default:
+		// Linux/Unix: Check if running as root
+		if os.Geteuid() == 0 {
+			// Root user: /var/log/orgname/appname
+			return filepath.Join("/var/log", OrgName, appName)
+		}
+		// Regular user: ~/.local/share/orgname/appname/logs
+		return filepath.Join(GetDataDir(appName), "logs")
+	}
+}
+
+// EnsureDir creates a directory if it doesn't exist
+func EnsureDir(path string) error {
+	return os.MkdirAll(path, 0755)
+}
+
+// capitalize returns the string with first letter capitalized
+func capitalize(s string) string {
 	if len(s) == 0 {
 		return s
 	}
-	// Convert first character to uppercase if it's lowercase
-	first := s[0]
-	if first >= 'a' && first <= 'z' {
-		first = first - 32
-	}
-	return string(first) + s[1:]
+	return string(s[0]-32) + s[1:]
 }

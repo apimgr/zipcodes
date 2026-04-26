@@ -112,7 +112,6 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 		"tags": []map[string]string{
 			{"name": "zipcodes", "description": "Zipcode data endpoints"},
 			{"name": "geoip", "description": "GeoIP location endpoints"},
-			{"name": "admin", "description": "Admin endpoints (authentication required)"},
 		},
 		"paths": map[string]interface{}{
 			"/zipcodes.json": map[string]interface{}{
