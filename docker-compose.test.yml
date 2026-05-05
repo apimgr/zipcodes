@@ -20,9 +20,9 @@ services:
       - DEV=true
 
     volumes:
-      - /tmp/zipcodes/rootfs/config/zipcodes:/config
-      - /tmp/zipcodes/rootfs/data/zipcodes:/data
-      - /tmp/zipcodes/rootfs/logs/zipcodes:/logs
+      - /tmp/zipcodes/volumes/config/zipcodes:/config
+      - /tmp/zipcodes/volumes/data/zipcodes:/data
+      - /tmp/zipcodes/volumes/logs/zipcodes:/logs
 
     ports:
       - "64181:80"
@@ -49,7 +49,7 @@ services:
   #     POSTGRES_PASSWORD: testpass
   #
   #   volumes:
-  #     - /tmp/zipcodes/rootfs/db/postgres:/var/lib/postgresql/data
+  #     - /tmp/zipcodes/volumes/db/postgres:/var/lib/postgresql/data
   #
   #   networks:
   #     - zipcodes
