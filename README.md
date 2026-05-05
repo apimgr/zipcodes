@@ -212,9 +212,9 @@ services:
       #- ADMIN_TOKEN=your-token-here
 
     volumes:
-      - ./rootfs/config/zipcodes:/config
-      - ./rootfs/data/zipcodes:/data
-      - ./rootfs/logs/zipcodes:/logs
+      - ./volumes/config/zipcodes:/config
+      - ./volumes/data/zipcodes:/data
+      - ./volumes/logs/zipcodes:/logs
 
     ports:
       - "172.17.0.1:64080:80"
@@ -256,9 +256,9 @@ docker-compose -f docker-compose.test.yml up -d
 docker run -d \
   --name zipcodes \
   -p 172.17.0.1:64080:80 \
-  -v ./rootfs/data/zipcodes:/data \
-  -v ./rootfs/config/zipcodes:/config \
-  -v ./rootfs/logs/zipcodes:/logs \
+  -v ./volumes/data/zipcodes:/data \
+  -v ./volumes/config/zipcodes:/config \
+  -v ./volumes/logs/zipcodes:/logs \
   --restart unless-stopped \
   ghcr.io/apimgr/zipcodes:latest
 
@@ -266,8 +266,8 @@ docker run -d \
 docker run -d \
   --name zipcodes \
   -p 127.0.0.1:64080:80 \
-  -v ./rootfs/data/zipcodes:/data \
-  -v ./rootfs/config/zipcodes:/config \
+  -v ./volumes/data/zipcodes:/data \
+  -v ./volumes/config/zipcodes:/config \
   ghcr.io/apimgr/zipcodes:latest
 ```
 
