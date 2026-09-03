@@ -1,0 +1,36 @@
+{{define "content"}}
+<div class="admin-logs">
+    <h1>{{.PageTitle}}</h1>
+
+    <div class="card">
+        <h2>Server Logs</h2>
+        <div class="log-viewer">
+            <p>Log viewing functionality coming soon...</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.admin-logs {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.log-viewer {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: monospace;
+    max-height: 600px;
+    overflow-y: auto;
+}
+</style>
+{{end}}
