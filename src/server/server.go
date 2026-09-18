@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/apimgr/zipcodes/src/admin"
 	"github.com/apimgr/zipcodes/src/api"
 	"github.com/apimgr/zipcodes/src/config"
 	"github.com/apimgr/zipcodes/src/database"
@@ -39,7 +38,6 @@ type Server struct {
 	router       *chi.Mux
 	db           *database.DB
 	config       *config.Config
-	adminHandler *admin.Handler
 	address      string
 	port         string
 	version      string
@@ -61,16 +59,6 @@ func New(db *database.DB, cfg *config.Config, address, port, version, buildDate,
 		commit:       commit,
 		zipcodesData: zipcodesData,
 	}
-
-	// Initialize admin handler
-	s.adminHandler = admin.NewHandler(
-		cfg.Server.Admin.Username,
-		cfg.Server.Admin.Password,
-		cfg.Server.Admin.APIToken,
-		cfg.Server.Session.Timeout,
-		false, // SSL enabled
-		version,
-	)
 
 	// Set embedded JSON data for API handlers
 	api.SetZipcodesJSON(zipcodesData)
@@ -119,9 +107,6 @@ func (s *Server) setupMiddleware() {
 
 // setupRoutes configures all routes
 func (s *Server) setupRoutes() {
-	// Register admin routes
-	s.adminHandler.RegisterRoutes(s.router)
-
 	// Static files
 	fileServer := http.FileServer(http.FS(staticFS))
 	s.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))

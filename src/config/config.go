@@ -30,20 +30,6 @@ type ServerConfig struct {
 	UpdateBranch string        `yaml:"update_branch"`
 	Metrics      MetricsConfig `yaml:"metrics"`
 	Logging      LoggingConfig `yaml:"logging"`
-	Admin        AdminConfig   `yaml:"admin"`
-	Session      SessionConfig `yaml:"session"`
-}
-
-// AdminConfig contains admin panel settings
-type AdminConfig struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	APIToken string `yaml:"api_token"`
-}
-
-// SessionConfig contains session settings
-type SessionConfig struct {
-	Timeout int `yaml:"timeout"`
 }
 
 // MetricsConfig contains metrics settings
@@ -110,14 +96,6 @@ func DefaultConfig() *Config {
 			Logging: LoggingConfig{
 				AccessFormat: "apache",
 				Level:        "info",
-			},
-			Admin: AdminConfig{
-				Username: "admin",
-				Password: "",
-				APIToken: "",
-			},
-			Session: SessionConfig{
-				Timeout: 3600,
 			},
 		},
 		WebUI: WebUIConfig{
