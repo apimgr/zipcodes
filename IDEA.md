@@ -24,7 +24,7 @@ client_binary: zipcodes-cli
 - City name search (optional state filter)
 - State-level listing by abbreviation
 - Radius-based geographic query: all ZIP codes within N miles of a given ZIP code or coordinate
-- Caller GeoIP lookup (country, city, approximate coordinates) via MaxMind GeoLite2
+- Caller GeoIP lookup (country, city, approximate coordinates) via the CC BY 4.0 ip-location-db datasets
 - Full web frontend (server-side Go templates, dark/light/auto theme, PWA, mobile-first)
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`
 - CLI client (`zipcodes-cli`) for terminal lookup: `zipcodes-cli 90210`
@@ -72,12 +72,12 @@ No PII stored or served. GeoIP results are computed per-request from the caller'
 | Boundary | Trust level | Notes |
 |----------|-------------|-------|
 | ZIP code SQLite database (embedded at build) | Fully trusted | Static, compiled into binary |
-| MaxMind GeoLite2 (downloaded at first run) | Trusted — HTTPS + checksum verified | Used for caller GeoIP lookup only |
+| ip-location-db MMDB datasets (downloaded at first run) | Trusted — HTTPS transport; sources and attribution follow AI.md PART 19 | Used for caller GeoIP lookup only |
 | Incoming HTTP requests | **Untrusted** | ZIP code validated as 5-digit numeric string; coordinate inputs bounds-checked; radius capped |
 
 No external API calls are made on behalf of user requests.
 
-Failure mode for GeoIP: if the GeoLite2 database is unavailable, the `/me` endpoint returns the caller's IP only without location fields. All ZIP code lookup endpoints are unaffected.
+Failure mode for GeoIP: if the configured ip-location-db files are unavailable, the `/me` endpoint returns the caller's IP only without location fields. All ZIP code lookup endpoints are unaffected.
 
 ### Threat model & abuse cases
 
@@ -98,6 +98,6 @@ Failure mode for GeoIP: if the GeoLite2 database is unavailable, the `/me` endpo
 ### Security decisions & exceptions
 
 - **No authentication on any endpoint**: intentional. Public read-only reference API.
-- **GeoIP database downloaded at runtime**: intentional for size and freshness. Integrity verified via HTTPS.
+- **GeoIP databases downloaded at runtime**: intentional for size and freshness. DB-IP city data and NRO country/ASN attribution follow AI.md PART 19.
 - **GeoIP is informational only**: the caller's IP is a standard HTTP observable; GeoIP lookup results are not stored or logged.
 - **All responses include `Access-Control-Allow-Origin: *`**: intentional. Public data API designed for cross-origin browser use.

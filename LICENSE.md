@@ -46,3 +46,14 @@ This project embeds the following third-party components:
 - https://www.sqlite.org/copyright.html
 
 All embedded dependencies retain their original licenses.
+
+### ZIP dataset
+
+The embedded ZIP dataset is licensed separately under Creative Commons Attribution 4.0 International (CC BY 4.0). Attribution: ZIP data from Ready APIs curated-us-zips, sourced from U.S. Census Bureau, USPS, and SimpleMaps. The dataset is pinned and its exclusions are documented in `data/licenses/zipcodes-data.md`.
+
+
+## GeoIP data attribution
+
+City data is provided by [DB-IP](https://db-ip.com/) under CC BY 4.0.
+
+Country and ASN data licensed CC BY 4.0 by the Number Resource Organization (NRO).
