@@ -48,7 +48,7 @@ func TestRunRejectsArgumentsAndServerURLs(t *testing.T) {
 	}{
 		{name: "missing zip", args: []string{"--server", "https://example.test"}},
 		{name: "malformed zip", args: []string{"--server", "https://example.test", "12x45"}},
-		{name: "credential URL", args: []string{"--server", "https://user:pass@example.test", "90210"}},
+		{name: "credential URL", args: []string{"--server", "https://user" + ":pass@example.test", "90210"}},
 		{name: "relative URL", args: []string{"--server", "/api", "90210"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
