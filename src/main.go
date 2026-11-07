@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/apimgr/zipcodes/src/geoip"
 	"github.com/apimgr/zipcodes/src/mode"
 	"github.com/apimgr/zipcodes/src/paths"
+	"github.com/apimgr/zipcodes/src/scheduler"
 	"github.com/apimgr/zipcodes/src/server"
 )
 
@@ -29,7 +31,7 @@ var zipcodesData []byte
 
 var (
 	Version   = "dev"
-	Commit    = "unknown"
+	CommitID  = "unknown"
 	BuildDate = "unknown"
 )
 
@@ -47,9 +49,28 @@ func main() {
 		serviceCmd      = flag.String("service", "", "Service command (install, uninstall, start, stop, restart, status)")
 		maintenanceMode = flag.String("maintenance", "", "Maintenance mode (on/off)")
 		modeFlag        = flag.String("mode", "", "Application mode (dev/development, prod/production)")
+		debugFlag       = flag.Bool("debug", false, "Enable debug logging")
+		colorFlag       = flag.String("color", "auto", "Color output: auto, yes, no")
 		updateCmd       = flag.String("update", "", "Update command (stable, beta, nightly)")
 	)
+	flag.BoolVar(showHelp, "h", false, "Show help message")
+	flag.BoolVar(showVersion, "v", false, "Show version information")
 	flag.Parse()
+
+	switch strings.ToLower(*colorFlag) {
+	case "auto":
+	case "yes":
+		os.Unsetenv("NO_COLOR")
+	case "no":
+		os.Setenv("NO_COLOR", "1")
+	default:
+		fmt.Fprintf(os.Stderr, "invalid --color value %q; choose auto, yes, or no\n", *colorFlag)
+		os.Exit(64)
+	}
+	if *debugFlag {
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		os.Setenv("DEBUG", "1")
+	}
 
 	// Show help
 	if *showHelp {
@@ -76,7 +97,7 @@ func main() {
 
 	// Status check (for health checks)
 	if *showStatus {
-		os.Exit(checkServerStatus())
+		os.Exit(checkServerStatus(*port))
 	}
 
 	// Handle service commands
@@ -117,7 +138,7 @@ func main() {
 	// Ensure directories exist
 	for _, dir := range []string{*configDir, *dataDir, *logsDir} {
 		if err := paths.EnsureDir(dir); err != nil {
-			log.Fatalf("Failed to create directory %s: %v", dir, err)
+			fatalExit(70, "Failed to create directory %s: %v", dir, err)
 		}
 	}
 
@@ -136,22 +157,31 @@ func main() {
 	// Initialize database for zipcode data
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		dbPath = filepath.Join(*dataDir, "zipcodes.db")
+		dbPath = filepath.Join(*dataDir, "db", "server.db")
 	}
 
+	if dbPath != ":memory:" {
+		if err := os.MkdirAll(filepath.Dir(dbPath), 0700); err != nil {
+			fatalExit(70, "Failed to create database directory: %v", err)
+		}
+	}
 	log.Printf("Database path: %s", dbPath)
 	db, err := database.Initialize(dbPath)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		fatalExit(70, "Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("close database: %v", err)
+		}
+	}()
 
 	log.Println("Database initialized successfully")
 
 	// Load zipcode data from embedded JSON
 	log.Println("Loading zipcode data from embedded JSON...")
 	if err := db.LoadFromJSON(zipcodesData); err != nil {
-		log.Fatalf("Failed to load zipcode data: %v", err)
+		fatalExit(70, "Failed to load zipcode data: %v", err)
 	}
 
 	// Get stats
@@ -162,12 +192,16 @@ func main() {
 		log.Printf("Loaded %d zipcodes from %d states", stats["total_zipcodes"], stats["total_states"])
 	}
 
-	// Initialize GeoIP databases (zipcodes needs location features)
-	if err := initializeGeoIP(*dataDir); err != nil {
-		log.Printf("Warning: GeoIP initialization failed: %v", err)
-		log.Println("GeoIP features will be unavailable")
+	// Initialize GeoIP only when enabled in server configuration.
+	if cfg.Server.GeoIP.Enabled {
+		if err := initializeGeoIP(*dataDir, cfg); err != nil {
+			log.Printf("Warning: GeoIP initialization failed: %v", err)
+			log.Println("GeoIP features will be unavailable")
+		} else {
+			log.Println("GeoIP databases initialized successfully")
+		}
 	} else {
-		log.Println("GeoIP databases initialized successfully")
+		log.Println("GeoIP is disabled by configuration")
 	}
 
 	// Determine server configuration
@@ -192,22 +226,57 @@ func main() {
 	}
 
 	// Create HTTP server
-	srv := server.New(db, cfg, *address, *port, Version, BuildDate, Commit, zipcodesData)
+	srv := server.New(db, cfg, *address, *port, Version, BuildDate, CommitID, zipcodesData)
+
+	var geoipScheduler *scheduler.Scheduler
+	if cfg.Server.GeoIP.Enabled {
+		geoipScheduler = scheduler.New()
+		interval := scheduler.ParseInterval(cfg.Server.GeoIP.UpdateInterval)
+		nextRun := nextGeoIPRun(time.Now(), cfg.Server.GeoIP.UpdateInterval, interval)
+		if state, exists, err := db.GetScheduledTask("geoip-update"); err != nil {
+			log.Printf("Warning: could not load GeoIP schedule state: %v", err)
+		} else if exists && state.Enabled {
+			if state.Interval == interval {
+				nextRun = state.NextRun
+			}
+		}
+		if err := db.SaveScheduledTask("geoip-update", interval, nextRun, true); err != nil {
+			log.Printf("Warning: could not persist GeoIP schedule: %v", err)
+		}
+		geoipScheduler.AddTaskSchedule("geoip-update", interval, nextRun, func(after time.Time) time.Time {
+			return nextGeoIPRun(after, cfg.Server.GeoIP.UpdateInterval, interval)
+		}, func() error {
+			started := time.Now()
+			runErr := refreshGeoIP(*dataDir, cfg)
+			finished := time.Now()
+			if err := db.SaveScheduledTask("geoip-update", interval, nextGeoIPRun(finished, cfg.Server.GeoIP.UpdateInterval, interval), true); err != nil {
+				log.Printf("Warning: could not persist GeoIP schedule: %v", err)
+			}
+			if err := db.RecordScheduledTaskRun("geoip-update", started, finished, runErr); err != nil {
+				log.Printf("Warning: could not persist GeoIP task history: %v", err)
+			}
+			return runErr
+		})
+		geoipScheduler.Start()
+		defer geoipScheduler.Stop()
+	} else if err := db.SaveScheduledTask("geoip-update", scheduler.ParseInterval(cfg.Server.GeoIP.UpdateInterval), nextGeoIPRun(time.Now(), cfg.Server.GeoIP.UpdateInterval, scheduler.ParseInterval(cfg.Server.GeoIP.UpdateInterval)), false); err != nil {
+		log.Printf("Warning: could not persist disabled GeoIP schedule: %v", err)
+	}
 
 	// Setup graceful shutdown
 	httpServer := &http.Server{
 		Addr:         fmt.Sprintf("%s:%s", *address, *port),
 		Handler:      srv.Router(),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  parseConfigDuration(cfg.Server.Limits.ReadTimeout, 30*time.Second),
+		WriteTimeout: parseConfigDuration(cfg.Server.Limits.WriteTimeout, 30*time.Second),
+		IdleTimeout:  parseConfigDuration(cfg.Server.Limits.IdleTimeout, 120*time.Second),
 	}
 
 	// Start server in goroutine
 	go func() {
 		log.Printf("Server listening on %s:%s", *address, *port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server error: %v", err)
+			fatalExit(70, "Server error: %v", err)
 		}
 	}()
 
@@ -229,13 +298,19 @@ func main() {
 	log.Println("Server stopped")
 }
 
-func initializeGeoIP(dataDir string) error {
+func initializeGeoIP(dataDir string, cfg *config.Config) error {
+	geoipDir := cfg.Server.GeoIP.Dir
+	if geoipDir == "" {
+		geoipDir = filepath.Join(dataDir, "security", "geoip")
+	} else if !filepath.IsAbs(geoipDir) {
+		geoipDir = filepath.Join(dataDir, geoipDir)
+	}
 	// Check if databases already exist
-	if !geoip.DatabasesExist(dataDir) {
-		log.Println("GeoIP databases not found. Downloading from GitHub...")
+	if !geoip.DatabasesExistInDirFor(geoipDir, cfg.Server.GeoIP.City, cfg.Server.GeoIP.Country, cfg.Server.GeoIP.ASN) {
+		log.Println("GeoIP databases not found. Downloading from ip-location-db...")
 
 		// Download databases
-		dbFiles, err := geoip.DownloadDatabases(dataDir)
+		dbFiles, err := geoip.DownloadSelectedDatabases(geoipDir, cfg.Server.GeoIP.City, cfg.Server.GeoIP.Country, cfg.Server.GeoIP.ASN)
 		if err != nil {
 			return fmt.Errorf("failed to download databases: %w", err)
 		}
@@ -258,9 +333,18 @@ func initializeGeoIP(dataDir string) error {
 	}
 
 	// Get database paths
-	dbPaths := geoip.GetDatabasePaths(dataDir)
+	dbPaths := geoip.GetDatabasePathsInDir(geoipDir)
 
 	// Initialize GeoIP with the databases
+	if !cfg.Server.GeoIP.City {
+		dbPaths.CityIPv4DB, dbPaths.CityIPv6DB = "", ""
+	}
+	if !cfg.Server.GeoIP.Country {
+		dbPaths.CountryDB = ""
+	}
+	if !cfg.Server.GeoIP.ASN {
+		dbPaths.ASNDB = ""
+	}
 	if err := geoip.Initialize(dbPaths.CityIPv4DB, dbPaths.CityIPv6DB, dbPaths.CountryDB, dbPaths.ASNDB); err != nil {
 		return fmt.Errorf("failed to initialize GeoIP: %w", err)
 	}
@@ -270,9 +354,14 @@ func initializeGeoIP(dataDir string) error {
 
 // checkServerStatus checks if the server is running and healthy
 // Returns exit code: 0 = healthy, 1 = unhealthy
-func checkServerStatus() int {
-	// Get port from environment or default
-	port := os.Getenv("PORT")
+func checkServerStatus(portOverride ...string) int {
+	port := ""
+	if len(portOverride) > 0 {
+		port = portOverride[0]
+	}
+	if port == "" {
+		port = os.Getenv("PORT")
+	}
 	if port == "" {
 		fmt.Println("Status: Unknown (no PORT specified)")
 		fmt.Println("Hint: Set PORT environment variable or use --port flag")
@@ -291,7 +380,7 @@ func checkServerStatus() int {
 		fmt.Printf("Error: %v\n", err)
 		return 1
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusOK {
 		fmt.Println("Status: Healthy")
@@ -336,6 +425,12 @@ func handleMaintenanceMode(m string) {
 	default:
 		fmt.Printf("Invalid maintenance mode: %s (use 'on' or 'off')\n", m)
 	}
+}
+
+// fatalExit prints a formatted error to stderr and exits with the given sysexits code.
+func fatalExit(code int, format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	os.Exit(code)
 }
 
 func printHelp() {
@@ -406,4 +501,46 @@ func handleUpdateCommand(branch string) {
 	}
 
 	fmt.Println("Update complete. Please rebuild the application.")
+}
+
+func refreshGeoIP(dataDir string, cfg *config.Config) error {
+	geoipDir := cfg.Server.GeoIP.Dir
+	if !filepath.IsAbs(geoipDir) {
+		geoipDir = filepath.Join(dataDir, geoipDir)
+	}
+	if _, err := geoip.DownloadSelectedDatabases(geoipDir, cfg.Server.GeoIP.City, cfg.Server.GeoIP.Country, cfg.Server.GeoIP.ASN); err != nil {
+		return err
+	}
+	paths := geoip.GetDatabasePathsInDir(geoipDir)
+	if !cfg.Server.GeoIP.City {
+		paths.CityIPv4DB, paths.CityIPv6DB = "", ""
+	}
+	if !cfg.Server.GeoIP.Country {
+		paths.CountryDB = ""
+	}
+	if !cfg.Server.GeoIP.ASN {
+		paths.ASNDB = ""
+	}
+	return geoip.Initialize(paths.CityIPv4DB, paths.CityIPv6DB, paths.CountryDB, paths.ASNDB)
+}
+
+func nextGeoIPRun(now time.Time, configured string, interval time.Duration) time.Time {
+	if configured != "weekly" {
+		return now.Add(interval)
+	}
+	next := time.Date(now.Year(), now.Month(), now.Day(), 3, 0, 0, 0, now.Location())
+	daysUntilSunday := (int(time.Sunday) - int(now.Weekday()) + 7) % 7
+	next = next.AddDate(0, 0, daysUntilSunday)
+	if !now.Before(next) {
+		next = next.AddDate(0, 0, 7)
+	}
+	return next
+}
+
+func parseConfigDuration(value string, fallback time.Duration) time.Duration {
+	duration, err := time.ParseDuration(value)
+	if err != nil || duration <= 0 {
+		return fallback
+	}
+	return duration
 }

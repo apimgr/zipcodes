@@ -66,12 +66,12 @@ class ZipcodeApp {
     this.hideResults();
 
     try {
-      const response = await fetch(`/api/v1/zipcode/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/v1/zipcodes/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
 
       this.hideLoading();
 
-      if (data.success) {
+      if (data.ok) {
         this.displayResults(data.data, data.count);
       } else {
         this.showError(data.error || 'Search failed');
@@ -90,10 +90,10 @@ class ZipcodeApp {
     }
 
     try {
-      const response = await fetch(`/api/v1/zipcode/autocomplete?q=${encodeURIComponent(query)}&limit=10`);
+      const response = await fetch(`/api/v1/zipcodes/autocomplete?q=${encodeURIComponent(query)}&limit=10`);
       const data = await response.json();
 
-      if (data.success && data.suggestions.length > 0) {
+      if (data.ok && data.suggestions.length > 0) {
         this.displayAutocomplete(data.suggestions);
       } else {
         this.autocompleteDiv.innerHTML = '';
@@ -141,7 +141,7 @@ class ZipcodeApp {
 
     this.resultsListDiv.innerHTML = data.map(zipcode => `
       <div class="result-card">
-        <div class="result-zip">${zipcode.zip_code}</div>
+        <div class="result-zip">${zipcode.zip || String(zipcode.zip_code).padStart(5, '0')}</div>
         <div class="result-city">${zipcode.city}</div>
         <div class="result-state">${zipcode.state}${zipcode.county ? ', ' + zipcode.county : ''}</div>
         ${zipcode.latitude && zipcode.longitude ? `
@@ -155,10 +155,10 @@ class ZipcodeApp {
 
   async loadStats() {
     try {
-      const response = await fetch('/api/v1/zipcode/stats');
+      const response = await fetch('/api/v1/zipcodes/stats');
       const data = await response.json();
 
-      if (data.success) {
+      if (data.ok) {
         document.getElementById('total-zipcodes').textContent =
           this.formatNumber(data.data.total_zipcodes);
         document.getElementById('total-states').textContent =

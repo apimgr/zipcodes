@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"html/template"
+	"log"
 	"net/http"
 )
 
@@ -42,7 +43,7 @@ func (s *Server) handleSwaggerUI(w http.ResponseWriter, r *http.Request) {
             </div>
             <nav id="main-nav" class="header-center">
                 <a href="/">Search</a>
-                <a href="/openapi" class="active">API Docs</a>
+                <a href="/server/swagger" class="active">API Docs</a>
                 <a href="/graphql">GraphQL</a>
             </nav>
             <div class="header-right">
@@ -61,7 +62,7 @@ func (s *Server) handleSwaggerUI(w http.ResponseWriter, r *http.Request) {
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle({
-                url: "/api/v1/openapi.json",
+                url: "/api/v1/server/openapi.json",
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
@@ -86,7 +87,9 @@ func (s *Server) handleSwaggerUI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	t.Execute(w, nil)
+	if err := t.Execute(w, nil); err != nil {
+		log.Printf("render documentation template: %v", err)
+	}
 }
 
 // handleOpenAPISpec serves the OpenAPI specification JSON
@@ -95,7 +98,7 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 		"openapi": "3.0.0",
 		"info": map[string]interface{}{
 			"title":       "Zipcode Lookup API",
-			"description": "US Postal Code lookup and search API with 340,000+ zipcodes",
+			"description": "Public US ZIP lookup API using an embedded 33,100-record geographic dataset",
 			"version":     "1.0.0",
 			"contact": map[string]string{
 				"name": "Zipcode Lookup API",
@@ -118,16 +121,17 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Download complete dataset",
-					"description": "Get the complete zipcodes dataset as JSON (340K+ records, 6.3MB)",
+					"description": "Get the embedded ZIP dataset as JSON (33,100 source records)",
 					"responses": map[string]interface{}{
 						"200": map[string]interface{}{
 							"description": "Successful response",
 							"content": map[string]interface{}{
 								"application/json": map[string]interface{}{
 									"schema": map[string]interface{}{
-										"type": "array",
-										"items": map[string]string{
-											"$ref": "#/components/schemas/Zipcode",
+										"type": "object",
+										"properties": map[string]interface{}{
+											"ok":   map[string]string{"type": "boolean"},
+											"data": map[string]interface{}{"type": "array", "items": map[string]string{"$ref": "#/components/schemas/Zipcode"}},
 										},
 									},
 								},
@@ -136,11 +140,33 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/search": map[string]interface{}{
+			"/me": map[string]interface{}{
+				"get": map[string]interface{}{
+					"tags":        []string{"server"},
+					"summary":     "Look up the caller IP",
+					"description": "Returns the request IP and GeoIP fields when a public address and database are available.",
+					"responses":   map[string]interface{}{"200": map[string]interface{}{"description": "Caller location or IP-only result"}},
+				},
+			},
+			"/zipcodes/nearby": map[string]interface{}{
+				"get": map[string]interface{}{
+					"tags":        []string{"zipcodes"},
+					"summary":     "Search ZIP codes within a radius",
+					"description": "Supply zip or a lat/lng pair and a radius in miles. The radius is bounded by server configuration and never exceeds 100 miles.",
+					"parameters": []map[string]interface{}{
+						{"name": "zip", "in": "query", "schema": map[string]string{"type": "string", "pattern": "^[0-9]{5}$"}},
+						{"name": "lat", "in": "query", "schema": map[string]interface{}{"type": "number", "minimum": -90, "maximum": 90}},
+						{"name": "lng", "in": "query", "schema": map[string]interface{}{"type": "number", "minimum": -180, "maximum": 180}},
+						{"name": "radius", "in": "query", "required": true, "schema": map[string]interface{}{"type": "number", "exclusiveMinimum": 0, "maximum": 100}},
+					},
+					"responses": map[string]interface{}{"200": map[string]interface{}{"description": "Nearest ZIP records within the requested radius"}, "400": map[string]interface{}{"description": "Invalid radius or origin"}},
+				},
+			},
+			"/zipcodes/search": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Search zipcodes",
-					"description": "Search zipcodes by code, city, state, or prefix",
+					"description": "Search zipcodes by code, city, state, or prefix. List results are paginated with page and limit.",
 					"parameters": []map[string]interface{}{
 						{
 							"name":        "q",
@@ -192,7 +218,7 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/{code}": map[string]interface{}{
+			"/zipcodes/{code}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Get zipcode details",
@@ -224,7 +250,7 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/{code}.txt": map[string]interface{}{
+			"/zipcodes/{code}.txt": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Get zipcode as plain text",
@@ -251,11 +277,11 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/city/{city}": map[string]interface{}{
+			"/zipcodes/city/{city}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Get zipcodes by city",
-					"description": "Get all zipcodes for a specific city",
+					"description": "Get paginated ZIP records for a specific city (default 250 records per page).",
 					"parameters": []map[string]interface{}{
 						{
 							"name":        "city",
@@ -280,11 +306,11 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/state/{state}": map[string]interface{}{
+			"/zipcodes/state/{state}": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Get zipcodes by state",
-					"description": "Get all zipcodes for a specific state",
+					"description": "Get paginated ZIP records for a specific state (default 250 records per page).",
 					"parameters": []map[string]interface{}{
 						{
 							"name":        "state",
@@ -309,7 +335,7 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/autocomplete": map[string]interface{}{
+			"/zipcodes/autocomplete": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Autocomplete suggestions",
@@ -337,7 +363,7 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 									"schema": map[string]interface{}{
 										"type": "object",
 										"properties": map[string]interface{}{
-											"success": map[string]string{"type": "boolean"},
+											"ok": map[string]string{"type": "boolean"},
 											"suggestions": map[string]interface{}{
 												"type": "array",
 												"items": map[string]string{
@@ -352,7 +378,7 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/zipcode/stats": map[string]interface{}{
+			"/zipcodes/stats": map[string]interface{}{
 				"get": map[string]interface{}{
 					"tags":        []string{"zipcodes"},
 					"summary":     "Get database statistics",
@@ -365,14 +391,13 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 									"schema": map[string]interface{}{
 										"type": "object",
 										"properties": map[string]interface{}{
-											"success": map[string]string{"type": "boolean"},
+											"ok": map[string]string{"type": "boolean"},
 											"data": map[string]interface{}{
 												"type": "object",
 												"properties": map[string]interface{}{
 													"total_zipcodes": map[string]string{"type": "integer"},
 													"total_cities":   map[string]string{"type": "integer"},
 													"total_states":   map[string]string{"type": "integer"},
-													"total_counties": map[string]string{"type": "integer"},
 												},
 											},
 										},
@@ -412,84 +437,89 @@ func (s *Server) handleOpenAPISpec(w http.ResponseWriter, r *http.Request) {
 					},
 				},
 			},
-			"/health": map[string]interface{}{
-				"get": map[string]interface{}{
-					"tags":        []string{"zipcodes"},
-					"summary":     "Health check",
-					"description": "Check API health status",
-					"responses": map[string]interface{}{
-						"200": map[string]interface{}{
-							"description": "Service is healthy",
-						},
-					},
-				},
-			},
 		},
 		"components": map[string]interface{}{
-			"securitySchemes": map[string]interface{}{
-				"bearerAuth": map[string]string{
-					"type":   "http",
-					"scheme": "bearer",
-				},
-			},
 			"schemas": map[string]interface{}{
 				"Zipcode": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"zipcode":   map[string]string{"type": "integer", "description": "5-digit zipcode"},
-						"city":      map[string]string{"type": "string", "description": "City name"},
-						"state":     map[string]string{"type": "string", "description": "State abbreviation"},
-						"county":    map[string]string{"type": "string", "description": "County name"},
-						"latitude":  map[string]string{"type": "string", "description": "Latitude coordinate"},
-						"longitude": map[string]string{"type": "string", "description": "Longitude coordinate"},
+						"zip":        map[string]string{"type": "string", "pattern": "^[0-9]{5}$"},
+						"zip_code":   map[string]string{"type": "integer", "description": "Legacy numeric ZIP field"},
+						"state_full": map[string]string{"type": "string"},
+						"timezone":   map[string]string{"type": "string"},
+						"area_codes": map[string]interface{}{"type": "array", "items": map[string]string{"type": "string"}},
+						"city":       map[string]string{"type": "string", "description": "City name"},
+						"state":      map[string]string{"type": "string", "description": "State abbreviation"},
+						"county":     map[string]string{"type": "string", "description": "County name"},
+						"latitude":   map[string]interface{}{"type": "number", "format": "float", "nullable": true},
+						"longitude":  map[string]interface{}{"type": "number", "format": "float", "nullable": true},
 					},
 				},
 				"ZipcodeResponse": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"success": map[string]string{"type": "boolean"},
+						"ok": map[string]string{"type": "boolean"},
 						"data": map[string]interface{}{
 							"$ref": "#/components/schemas/Zipcode",
 						},
-						"timestamp": map[string]string{"type": "string", "format": "date-time"},
 					},
 				},
 				"SearchResponse": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"success": map[string]string{"type": "boolean"},
-						"count":   map[string]string{"type": "integer"},
+						"ok": map[string]string{"type": "boolean"},
 						"data": map[string]interface{}{
-							"type": "array",
-							"items": map[string]string{
-								"$ref": "#/components/schemas/Zipcode",
-							},
+							"type":  "array",
+							"items": map[string]string{"$ref": "#/components/schemas/Zipcode"},
 						},
-						"timestamp": map[string]string{"type": "string", "format": "date-time"},
+						"pagination": map[string]interface{}{"$ref": "#/components/schemas/Pagination"},
+					},
+				},
+				"Pagination": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"page":  map[string]string{"type": "integer"},
+						"limit": map[string]string{"type": "integer"},
+						"total": map[string]string{"type": "integer"},
+						"pages": map[string]string{"type": "integer"},
 					},
 				},
 				"ErrorResponse": map[string]interface{}{
 					"type": "object",
 					"properties": map[string]interface{}{
-						"success": map[string]string{"type": "boolean"},
-						"error": map[string]interface{}{
-							"type": "object",
-							"properties": map[string]interface{}{
-								"code":    map[string]string{"type": "string"},
-								"message": map[string]string{"type": "string"},
-								"field":   map[string]string{"type": "string"},
-							},
-						},
-						"timestamp": map[string]string{"type": "string", "format": "date-time"},
+						"ok":      map[string]string{"type": "boolean"},
+						"error":   map[string]string{"type": "string"},
+						"message": map[string]string{"type": "string"},
+						"details": map[string]interface{}{"type": "object", "additionalProperties": true},
 					},
 				},
 			},
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	paths := spec["paths"].(map[string]interface{})
+	pageParameters := []map[string]interface{}{
+		{"name": "page", "in": "query", "description": "Page number (default 1)", "schema": map[string]interface{}{"type": "integer", "minimum": 1, "default": 1}},
+		{"name": "limit", "in": "query", "description": "Records per page (default 250, maximum 250)", "schema": map[string]interface{}{"type": "integer", "minimum": 1, "maximum": 250, "default": 250}},
+	}
+	for _, path := range []string{"/zipcodes/search", "/zipcodes/nearby", "/zipcodes/city/{city}", "/zipcodes/state/{state}"} {
+		pathItem, ok := paths[path].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		operation, ok := pathItem["get"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		parameters, _ := operation["parameters"].([]map[string]interface{})
+		operation["parameters"] = append(parameters, pageParameters...)
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(spec)
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(spec)
 }
 
 // handleGraphQLPlayground serves the GraphQL Playground with site theme
@@ -515,7 +545,7 @@ func (s *Server) handleGraphQLPlayground(w http.ResponseWriter, r *http.Request)
             </div>
             <nav id="main-nav" class="header-center">
                 <a href="/">Search</a>
-                <a href="/openapi">API Docs</a>
+                <a href="/server/swagger">API Docs</a>
                 <a href="/graphql" class="active">GraphQL</a>
             </nav>
             <div class="header-right">
@@ -543,7 +573,7 @@ func (s *Server) handleGraphQLPlayground(w http.ResponseWriter, r *http.Request)
                 tabs: [
                     {
                         endpoint: '/api/v1/graphql',
-                        query: '# Welcome to Zipcode Lookup GraphQL API\n# Press the Play button to run a query\n\nquery GetZipcode {\n  zipcode(code: "94102") {\n    zipcode\n    city\n    state\n    county\n    coordinates {\n      latitude\n      longitude\n    }\n  }\n}\n\nquery SearchByCity {\n  search(city: "San Francisco") {\n    zipcode\n    city\n    state\n  }\n}\n\nquery SearchByState {\n  search(state: "CA") {\n    zipcode\n    city\n    state\n    county\n  }\n}\n\nquery Stats {\n  stats {\n    totalZipcodes\n    totalCities\n    totalStates\n    totalCounties\n  }\n}'
+                        query: '# Welcome to Zipcode Lookup GraphQL API\n# Press the Play button to run a query\n\nquery GetZipcode {\n  zipcode(code: "94102") {\n    zipcode\n    city\n    state\n    county\n    coordinates {\n      latitude\n      longitude\n    }\n  }\n}\n\nquery SearchByCity {\n  search(city: "San Francisco") {\n    zipcode\n    city\n    state\n  }\n}\n\nquery SearchByState {\n  search(state: "CA") {\n    zipcode\n    city\n    state\n    county\n  }\n}\n\nquery Stats {\n  stats {\n    totalZipcodes\n    totalCities\n    totalStates\n  }\n}'
                     }
                 ]
             });
@@ -559,17 +589,12 @@ func (s *Server) handleGraphQLPlayground(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	t.Execute(w, nil)
+	if err := t.Execute(w, nil); err != nil {
+		log.Printf("render documentation template: %v", err)
+	}
 }
 
 // handleGraphQL handles GraphQL queries
 func (s *Server) handleGraphQL(w http.ResponseWriter, r *http.Request) {
-	// For now, return a simple message
-	// Full GraphQL implementation would go here
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"message":    "GraphQL endpoint - Full implementation coming soon",
-		"playground": "/graphql",
-	})
+	s.serveGraphQL(w, r)
 }

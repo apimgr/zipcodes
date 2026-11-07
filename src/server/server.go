@@ -4,8 +4,11 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/apimgr/zipcodes/src/api"
@@ -18,9 +21,6 @@ import (
 
 //go:embed static
 var staticFiles embed.FS
-
-//go:embed templates
-var templateFiles embed.FS
 
 // For use in handlers
 var staticFS fs.FS
@@ -35,29 +35,31 @@ func init() {
 
 // Server represents the HTTP server
 type Server struct {
-	router       *chi.Mux
-	db           *database.DB
-	config       *config.Config
-	address      string
-	port         string
-	version      string
-	buildDate    string
-	commit       string
-	zipcodesData []byte
+	router         *chi.Mux
+	db             *database.DB
+	config         *config.Config
+	address        string
+	port           string
+	version        string
+	buildDate      string
+	commit         string
+	zipcodesData   []byte
+	trustedProxies []*net.IPNet
 }
 
 // New creates a new server instance
 func New(db *database.DB, cfg *config.Config, address, port, version, buildDate, commit string, zipcodesData []byte) *Server {
 	s := &Server{
-		router:       chi.NewRouter(),
-		db:           db,
-		config:       cfg,
-		address:      address,
-		port:         port,
-		version:      version,
-		buildDate:    buildDate,
-		commit:       commit,
-		zipcodesData: zipcodesData,
+		router:         chi.NewRouter(),
+		db:             db,
+		config:         cfg,
+		address:        address,
+		port:           port,
+		version:        version,
+		buildDate:      buildDate,
+		commit:         commit,
+		zipcodesData:   zipcodesData,
+		trustedProxies: buildTrustedProxies(address, cfg.Server.TrustedProxies.Additional),
 	}
 
 	// Set embedded JSON data for API handlers
@@ -83,17 +85,27 @@ func (s *Server) setupMiddleware() {
 	// Request ID
 	s.router.Use(middleware.RequestID)
 
-	// Real IP
-	s.router.Use(middleware.RealIP)
+	// Resolve forwarding headers only when the immediate peer is trusted.
+	s.router.Use(s.trustedProxyMiddleware)
+
+	// Enforce public per-IP abuse limits after trusted proxy resolution.
+	s.router.Use(rateLimitMiddleware(s.db))
 
 	// Logger
 	s.router.Use(middleware.Logger)
 
-	// Compression
-	s.router.Use(middleware.Compress(5))
+	// Compression and request deadlines follow validated server configuration.
+	if s.config.Server.Compression.Enabled {
+		s.router.Use(middleware.Compress(s.config.Server.Compression.Level, s.config.Server.Compression.Types...))
+	}
+	writeTimeout, err := time.ParseDuration(s.config.Server.Limits.WriteTimeout)
+	if err != nil || writeTimeout <= 0 {
+		writeTimeout = 30 * time.Second
+	}
+	s.router.Use(middleware.Timeout(writeTimeout))
 
-	// Timeout
-	s.router.Use(middleware.Timeout(60 * time.Second))
+	// Bound request-line and body sizes before handlers parse untrusted input.
+	s.router.Use(requestSizeMiddleware)
 
 	// Throttle concurrent requests
 	s.router.Use(middleware.Throttle(1000))
@@ -112,10 +124,14 @@ func (s *Server) setupRoutes() {
 	s.router.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
 	// Public routes
-	s.router.Get("/", s.handleHome)
+	s.router.Get("/", s.handleSearchPage)
+	s.router.Get("/search", s.handleSearchPage)
 	s.router.Get("/healthz", s.handleHealth)
-	s.router.Get("/health", s.handleHealth)
-	s.router.Get("/status", s.handleHealth)
+	s.router.Get("/server/about", s.handleAbout)
+	s.router.Get("/server/help", s.handleHelp)
+	s.router.Get("/server/healthz", s.handleHealthPage)
+	s.router.Get("/server/privacy", s.handlePrivacy)
+	s.router.Get("/server/terms", s.handleTerms)
 
 	// PWA support
 	s.router.Get("/manifest.json", s.handleManifest)
@@ -125,52 +141,51 @@ func (s *Server) setupRoutes() {
 	s.router.Get("/.well-known/security.txt", s.handleSecurityTxt)
 
 	// Documentation routes
-	s.router.Get("/openapi", s.handleSwaggerUI)
+	s.router.Get("/server/swagger", s.handleSwaggerUI)
 	s.router.Get("/graphql", s.handleGraphQLPlayground)
 
 	// API v1 routes (all public, no auth)
 	s.router.Route("/api/v1", func(r chi.Router) {
 		// Documentation endpoints
-		r.Get("/openapi", s.handleSwaggerUI)
-		r.Get("/openapi.json", s.handleOpenAPISpec)
+		r.Get("/server/swagger", s.handleSwaggerUI)
+		r.Get("/server/openapi.json", s.handleOpenAPISpec)
 		r.Get("/graphql", s.handleGraphQLPlayground)
 		r.Post("/graphql", s.handleGraphQL)
 
-		// Health endpoint
-		r.Get("/health", s.handleHealth)
+		// Server information pages and API equivalents
+		r.Get("/server/about", s.handleAbout)
+		r.Get("/server/help", s.handleHelp)
+		r.Get("/server/healthz", s.handleHealthPage)
+		r.Get("/server/privacy", s.handlePrivacy)
+		r.Get("/server/terms", s.handleTerms)
 
 		// Raw JSON file endpoint
 		r.Get("/zipcodes.json", api.RawJSONHandler)
 
 		// Zipcode endpoints - JSON
-		r.Get("/zipcode/search", api.SearchHandler)
-		r.Get("/zipcode/autocomplete", api.AutoCompleteHandler)
-		r.Get("/zipcode/stats", api.StatsHandler)
-		r.Get("/zipcode/{code}", api.GetByZipCodeHandler)
-		r.Get("/zipcode/city/{city}", api.GetByCityHandler)
-		r.Get("/zipcode/state/{state}", api.GetByStateHandler)
-		r.Get("/zipcode/random", api.RandomHandler)
+		r.Get("/zipcodes/search", api.SearchHandler)
+		r.Get("/zipcodes/autocomplete", api.AutoCompleteHandler)
+		r.Get("/zipcodes/nearby", api.NearbyHandler)
+		r.Get("/zipcodes/stats", api.StatsHandler)
+		r.Get("/zipcodes/{code}", api.GetByZipCodeHandler)
+		r.Get("/zipcodes/city/{city}", api.GetByCityHandler)
+		r.Get("/zipcodes/state/{state}", api.GetByStateHandler)
+		r.Get("/zipcodes/random", api.RandomHandler)
 
 		// Zipcode endpoints - Plain text (.txt)
-		r.Get("/zipcode/{code}.txt", api.GetByZipCodeTextHandler)
-		r.Get("/zipcode/stats.txt", api.StatsTextHandler)
-		r.Get("/zipcode/random.txt", api.RandomTextHandler)
+		r.Get("/zipcodes/{code}.txt", api.GetByZipCodeTextHandler)
+		r.Get("/zipcodes/stats.txt", api.StatsTextHandler)
+		r.Get("/zipcodes/random.txt", api.RandomTextHandler)
 
 		// GeoIP endpoints
+		r.Get("/me", geoip.MeHandler)
 		r.Get("/geoip", geoip.LookupHandler)
 		r.Get("/geoip.txt", geoip.LookupTextHandler)
 		r.Post("/geoip/batch", geoip.BatchLookupHandler)
 
 		// Stats & count
-		r.Get("/stats", api.StatsHandler)
-		r.Get("/stats.txt", api.StatsTextHandler)
-		r.Get("/count", api.CountHandler)
-		r.Get("/count.txt", api.CountTextHandler)
 	})
 
-	// Shorthand routes
-	s.router.Get("/random", api.RandomHandler)
-	s.router.Get("/random.txt", api.RandomTextHandler)
 }
 
 // corsMiddleware adds CORS headers
@@ -201,35 +216,33 @@ func (s *Server) securityHeadersMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// handleHome serves the main page
-func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
-	data, err := templateFiles.ReadFile("templates/index.html")
-	if err != nil {
-		http.Error(w, "Template not found", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(data)
-}
-
 // handleHealth returns server health status
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	stats, err := s.db.GetStats()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if strings.Contains(strings.ToLower(r.Header.Get("Accept")), "text/plain") {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = fmt.Fprintln(w, "ERROR: The service is unavailable.")
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "unavailable"})
 		return
 	}
 
-	respondJSON(w, http.StatusOK, APIResponse{
-		Success: true,
-		Data: map[string]interface{}{
-			"status":        "healthy",
-			"version":       s.version,
-			"total_zips":    stats["total_zipcodes"],
-			"total_states":  stats["total_states"],
-			"geoip_enabled": geoip.GetInstance() != nil,
-		},
+	if strings.Contains(strings.ToLower(r.Header.Get("Accept")), "text/plain") {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = fmt.Fprintln(w, "OK: Zip code lookup is available.")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":        "healthy",
+		"version":       s.version,
+		"total_zips":    stats["total_zipcodes"],
+		"total_states":  stats["total_states"],
+		"geoip_enabled": geoip.GetInstance() != nil,
 	})
 }
 
@@ -244,8 +257,7 @@ func (s *Server) handleManifest(w http.ResponseWriter, r *http.Request) {
 		"background_color": "#1a1a1a",
 		"theme_color":      "#0066cc",
 		"icons": []map[string]string{
-			{"src": "/static/images/icon-192.png", "sizes": "192x192", "type": "image/png"},
-			{"src": "/static/images/icon-512.png", "sizes": "512x512", "type": "image/png"},
+			{"src": "/static/images/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"},
 		},
 	}
 	respondJSON(w, http.StatusOK, manifest)
@@ -253,41 +265,61 @@ func (s *Server) handleManifest(w http.ResponseWriter, r *http.Request) {
 
 // handleServiceWorker serves the service worker
 func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/javascript")
-	w.Write([]byte(`// Service Worker for Zipcodes API
-const CACHE_NAME = 'zipcodes-api-v1';
-const urlsToCache = [
-  '/',
-  '/static/css/main.css',
-  '/static/js/main.js'
-];
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	if _, err := io.WriteString(w, `const CACHE_NAME = "zipcodes-v2";
+const APP_SHELL = ["/", "/static/css/main.css", "/static/js/theme.js", "/static/images/icon.svg", "/manifest.json"];
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-  );
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
-  );
+self.addEventListener("activate", (event) => {
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("zipcodes-") && key !== CACHE_NAME).map((key) => caches.delete(key)))));
+  self.clients.claim();
 });
-`))
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).then((response) => {
+      if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put("/", response.clone()));
+      return response;
+    }).catch(async () => (await caches.match("/")) || Response.error()));
+    return;
+  }
+  event.respondWith(caches.match(request).then((cached) => {
+    const refresh = fetch(request).then((response) => {
+      if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
+      return response;
+    });
+    return cached || refresh;
+  }));
+});
+`); err != nil {
+		return
+	}
 }
 
 // handleRobotsTxt serves robots.txt
 func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintln(w, "User-agent: *")
+	if _, err := fmt.Fprintln(w, "User-agent: *"); err != nil {
+		return
+	}
 	for _, path := range cfg.WebRobots.Allow {
-		fmt.Fprintf(w, "Allow: %s\n", path)
+		if _, err := fmt.Fprintf(w, "Allow: %s\n", path); err != nil {
+			return
+		}
 	}
 	for _, path := range cfg.WebRobots.Deny {
-		fmt.Fprintf(w, "Disallow: %s\n", path)
+		if _, err := fmt.Fprintf(w, "Disallow: %s\n", path); err != nil {
+			return
+		}
 	}
 }
 
@@ -295,42 +327,42 @@ func (s *Server) handleRobotsTxt(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSecurityTxt(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintln(w, "# Security Policy")
-	if cfg.WebSecurity.Admin != "" {
-		fmt.Fprintf(w, "Contact: mailto:%s\n", cfg.WebSecurity.Admin)
-	} else {
-		fmt.Fprintln(w, "Contact: mailto:security@example.com")
+	if _, err := fmt.Fprintln(w, "# Security Policy"); err != nil {
+		return
 	}
-	fmt.Fprintln(w, "Preferred-Languages: en")
+	if cfg.WebSecurity.Admin != "" {
+		if _, err := fmt.Fprintf(w, "Contact: mailto:%s\n", cfg.WebSecurity.Admin); err != nil {
+			return
+		}
+	} else {
+		if _, err := fmt.Fprintln(w, "Contact: https://github.com/apimgr/zipcodes/security/advisories/new"); err != nil {
+			return
+		}
+	}
+	if _, err := fmt.Fprintf(w, "Expires: %s\n", time.Now().UTC().AddDate(1, 0, 0).Format(time.RFC3339)); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintln(w, "Preferred-Languages: en"); err != nil {
+		return
+	}
+	if _, err := fmt.Fprintln(w, "Canonical: https://github.com/apimgr/zipcodes/.well-known/security.txt"); err != nil {
+		return
+	}
 }
 
-// APIResponse represents a standardized API response
-type APIResponse struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   *APIError   `json:"error,omitempty"`
-}
-
-// APIError represents an API error
-type APIError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-// respondJSON writes a JSON response
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(data)
 }
 
-// respondError writes an error JSON response
 func respondError(w http.ResponseWriter, status int, message string) {
-	respondJSON(w, status, APIResponse{
-		Success: false,
-		Error: &APIError{
-			Code:    status,
-			Message: message,
-		},
+	respondJSON(w, status, map[string]interface{}{
+		"ok":      false,
+		"error":   "REQUEST_FAILED",
+		"message": message,
+		"details": map[string]interface{}{},
 	})
 }

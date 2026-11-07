@@ -58,6 +58,7 @@ admin_credentials
 
 # GeoIP databases (downloaded on first run)
 **/geoip/*.mmdb
+**/security/geoip/*.mmdb
 GeoLite2-*.mmdb
 
 # Backup files

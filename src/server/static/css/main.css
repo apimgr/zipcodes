@@ -26,6 +26,17 @@
   --transition: 200ms ease;
 }
 
+@media (prefers-color-scheme: light) {
+  [data-theme="auto"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e5e5e5;
+    --text-primary: #1a1a1a;
+    --text-secondary: #666666;
+    --border-color: #e0e0e0;
+  }
+}
+
 [data-theme="light"] {
   --bg-primary: #ffffff;
   --bg-secondary: #f5f5f5;

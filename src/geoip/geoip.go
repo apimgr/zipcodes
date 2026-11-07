@@ -5,228 +5,153 @@ import (
 	"net"
 	"sync"
 
-	"github.com/oschwald/geoip2-golang"
+	"github.com/oschwald/maxminddb-golang"
+	"golang.org/x/text/language"
+	"golang.org/x/text/language/display"
 )
 
-// GeoIP holds the GeoIP2 database readers
+// GeoIP owns readers for the CC BY 4.0 ip-location-db databases.
 type GeoIP struct {
-	cityIPv4DB *geoip2.Reader // City database for IPv4 addresses
-	cityIPv6DB *geoip2.Reader // City database for IPv6 addresses
-	countryDB  *geoip2.Reader // Country database (combined IPv4/IPv6)
-	asnDB      *geoip2.Reader // ASN database (combined IPv4/IPv6)
-	mu         sync.RWMutex
+	cityIPv4DB *maxminddb.Reader
+	cityIPv6DB *maxminddb.Reader
+	countryDB *maxminddb.Reader
+	asnDB *maxminddb.Reader
+	mu sync.RWMutex
 }
 
-// Location represents a geographical location
+type cityRecord struct {
+	City string `maxminddb:"city"`
+	CountryCode string `maxminddb:"country_code"`
+	State1 string `maxminddb:"state1"`
+	State2 string `maxminddb:"state2"`
+	Postcode string `maxminddb:"postcode"`
+	Latitude float64 `maxminddb:"latitude"`
+	Longitude float64 `maxminddb:"longitude"`
+	Timezone string `maxminddb:"timezone"`
+}
+
+type countryRecord struct {
+	CountryCode string `maxminddb:"country_code"`
+}
+
+type asnRecord struct {
+	Number uint `maxminddb:"autonomous_system_number"`
+	Organization string `maxminddb:"autonomous_system_organization"`
+}
+
+// Location represents the available approximate location for an IP address.
 type Location struct {
-	IP          string  `json:"ip"`
-	Country     string  `json:"country"`
-	CountryCode string  `json:"country_code"`
-	City        string  `json:"city"`
-	Latitude    float64 `json:"latitude"`
-	Longitude   float64 `json:"longitude"`
-	Timezone    string  `json:"timezone"`
-	ASN         uint    `json:"asn,omitempty"`
-	ASNOrg      string  `json:"asn_org,omitempty"`
+	IP string `json:"ip"`
+	Country string `json:"country"`
+	CountryCode string `json:"country_code"`
+	City string `json:"city"`
+	Latitude float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Timezone string `json:"timezone"`
+	ASN uint `json:"asn,omitempty"`
+	ASNOrg string `json:"asn_org,omitempty"`
 }
 
 var (
 	instance *GeoIP
-	once     sync.Once
+	instanceMu sync.RWMutex
 )
 
-// Initialize creates the GeoIP instance with database paths
+// Initialize opens the configured MMDB files and replaces the active readers.
 func Initialize(cityIPv4DBPath, cityIPv6DBPath, countryDBPath, asnDBPath string) error {
-	var err error
-	once.Do(func() {
-		instance = &GeoIP{}
-
-		// Load City IPv4 database
-		if cityIPv4DBPath != "" {
-			instance.cityIPv4DB, err = geoip2.Open(cityIPv4DBPath)
-			if err != nil {
-				err = fmt.Errorf("failed to open city IPv4 database: %w", err)
-				return
-			}
+	readers := make([]*maxminddb.Reader, 4)
+	paths := []string{cityIPv4DBPath, cityIPv6DBPath, countryDBPath, asnDBPath}
+	for index, path := range paths {
+		if path == "" { continue }
+		reader, err := maxminddb.Open(path)
+		if err != nil {
+			for _, opened := range readers { if opened != nil { _ = opened.Close() } }
+			return fmt.Errorf("failed to open GeoIP database %q: %w", path, err)
 		}
-
-		// Load City IPv6 database
-		if cityIPv6DBPath != "" {
-			instance.cityIPv6DB, err = geoip2.Open(cityIPv6DBPath)
-			if err != nil {
-				err = fmt.Errorf("failed to open city IPv6 database: %w", err)
-				return
-			}
-		}
-
-		// Load Country database
-		if countryDBPath != "" {
-			instance.countryDB, err = geoip2.Open(countryDBPath)
-			if err != nil {
-				err = fmt.Errorf("failed to open country database: %w", err)
-				return
-			}
-		}
-
-		// Load ASN database
-		if asnDBPath != "" {
-			instance.asnDB, err = geoip2.Open(asnDBPath)
-			if err != nil {
-				err = fmt.Errorf("failed to open ASN database: %w", err)
-				return
-			}
-		}
-	})
-
-	return err
+		readers[index] = reader
+	}
+	if readers[0] == nil && readers[1] == nil && readers[2] == nil && readers[3] == nil {
+		return fmt.Errorf("no GeoIP databases were configured")
+	}
+	initialized := &GeoIP{cityIPv4DB: readers[0], cityIPv6DB: readers[1], countryDB: readers[2], asnDB: readers[3]}
+	instanceMu.Lock()
+	previous := instance
+	instance = initialized
+	instanceMu.Unlock()
+	if previous != nil { _ = previous.Close() }
+	return nil
 }
 
-// GetInstance returns the GeoIP singleton instance
+// GetInstance returns the active GeoIP reader set.
 func GetInstance() *GeoIP {
+	instanceMu.RLock()
+	defer instanceMu.RUnlock()
 	return instance
 }
 
-// Lookup performs a GeoIP lookup for the given IP address
+// Lookup queries the local IP-location databases without making network requests.
 func (g *GeoIP) Lookup(ip string) (*Location, error) {
-	if g == nil {
-		return nil, fmt.Errorf("GeoIP not initialized")
-	}
-
+	if g == nil { return nil, fmt.Errorf("GeoIP not initialized") }
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil { return nil, fmt.Errorf("invalid IP address") }
+	if !isPublicAddress(parsedIP) { return &Location{IP: parsedIP.String()}, nil }
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
-		return nil, fmt.Errorf("invalid IP address: %s", ip)
-	}
-
-	location := &Location{
-		IP: ip,
-	}
-
-	// Determine which city database to use based on IP version
-	var cityDB *geoip2.Reader
-	if parsedIP.To4() != nil {
-		// IPv4 address
-		cityDB = g.cityIPv4DB
-	} else {
-		// IPv6 address
-		cityDB = g.cityIPv6DB
-	}
-
-	// Try City database first (has most detailed info)
+	location := &Location{IP: parsedIP.String()}
+	var cityDB *maxminddb.Reader
+	if parsedIP.To4() != nil { cityDB = g.cityIPv4DB } else { cityDB = g.cityIPv6DB }
 	if cityDB != nil {
-		record, err := cityDB.City(parsedIP)
-		if err == nil {
-			location.Country = record.Country.Names["en"]
-			location.CountryCode = record.Country.IsoCode
-			location.City = record.City.Names["en"]
-			location.Latitude = record.Location.Latitude
-			location.Longitude = record.Location.Longitude
-			location.Timezone = record.Location.TimeZone
-		}
-	} else if g.countryDB != nil {
-		// Fallback to Country database
-		record, err := g.countryDB.Country(parsedIP)
-		if err == nil {
-			location.Country = record.Country.Names["en"]
-			location.CountryCode = record.Country.IsoCode
+		var record cityRecord
+		if err := cityDB.Lookup(parsedIP, &record); err == nil {
+			location.City = record.City
+			location.CountryCode = record.CountryCode
+			location.Latitude = record.Latitude
+			location.Longitude = record.Longitude
+			location.Timezone = record.Timezone
 		}
 	}
-
-	// Get ASN information if available
+	if location.CountryCode == "" && g.countryDB != nil {
+		var record countryRecord
+		if err := g.countryDB.Lookup(parsedIP, &record); err == nil { location.CountryCode = record.CountryCode }
+	}
+	if location.CountryCode != "" {
+		if region, err := language.ParseRegion(location.CountryCode); err == nil {
+			location.Country = display.English.Regions().Name(region)
+		}
+	}
 	if g.asnDB != nil {
-		record, err := g.asnDB.ASN(parsedIP)
-		if err == nil {
-			location.ASN = record.AutonomousSystemNumber
-			location.ASNOrg = record.AutonomousSystemOrganization
+		var record asnRecord
+		if err := g.asnDB.Lookup(parsedIP, &record); err == nil {
+			location.ASN = record.Number
+			location.ASNOrg = record.Organization
 		}
 	}
-
 	return location, nil
 }
 
-// Reload reloads the GeoIP databases (for updates)
+// Reload replaces all active database readers with the updated files.
 func (g *GeoIP) Reload(cityIPv4DBPath, cityIPv6DBPath, countryDBPath, asnDBPath string) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	// Close existing databases
-	if g.cityIPv4DB != nil {
-		g.cityIPv4DB.Close()
-	}
-	if g.cityIPv6DB != nil {
-		g.cityIPv6DB.Close()
-	}
-	if g.countryDB != nil {
-		g.countryDB.Close()
-	}
-	if g.asnDB != nil {
-		g.asnDB.Close()
-	}
-
-	// Reload databases
-	var err error
-	if cityIPv4DBPath != "" {
-		g.cityIPv4DB, err = geoip2.Open(cityIPv4DBPath)
-		if err != nil {
-			return fmt.Errorf("failed to reload city IPv4 database: %w", err)
-		}
-	}
-
-	if cityIPv6DBPath != "" {
-		g.cityIPv6DB, err = geoip2.Open(cityIPv6DBPath)
-		if err != nil {
-			return fmt.Errorf("failed to reload city IPv6 database: %w", err)
-		}
-	}
-
-	if countryDBPath != "" {
-		g.countryDB, err = geoip2.Open(countryDBPath)
-		if err != nil {
-			return fmt.Errorf("failed to reload country database: %w", err)
-		}
-	}
-
-	if asnDBPath != "" {
-		g.asnDB, err = geoip2.Open(asnDBPath)
-		if err != nil {
-			return fmt.Errorf("failed to reload ASN database: %w", err)
-		}
-	}
-
-	return nil
+	return Initialize(cityIPv4DBPath, cityIPv6DBPath, countryDBPath, asnDBPath)
 }
 
-// Close closes all database readers
+// Close closes all database readers owned by this instance.
 func (g *GeoIP) Close() error {
-	if g == nil {
-		return nil
-	}
-
+	if g == nil { return nil }
 	g.mu.Lock()
 	defer g.mu.Unlock()
-
-	if g.cityIPv4DB != nil {
-		g.cityIPv4DB.Close()
+	var firstErr error
+	for _, reader := range []*maxminddb.Reader{g.cityIPv4DB, g.cityIPv6DB, g.countryDB, g.asnDB} {
+		if reader != nil {
+			if err := reader.Close(); err != nil && firstErr == nil { firstErr = err }
+		}
 	}
-	if g.cityIPv6DB != nil {
-		g.cityIPv6DB.Close()
-	}
-	if g.countryDB != nil {
-		g.countryDB.Close()
-	}
-	if g.asnDB != nil {
-		g.asnDB.Close()
-	}
-
-	return nil
+	return firstErr
 }
 
 // LookupIP is a convenience function to lookup an IP using the global instance
 func LookupIP(ip string) (*Location, error) {
-	if instance == nil {
-		return nil, fmt.Errorf("GeoIP not initialized")
-	}
+	instanceMu.RLock()
+	defer instanceMu.RUnlock()
+	if instance == nil { return nil, fmt.Errorf("GeoIP not initialized") }
 	return instance.Lookup(ip)
 }

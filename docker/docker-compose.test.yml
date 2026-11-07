@@ -1,0 +1,43 @@
+name: zipcodes-test
+
+x-logging: &default-logging
+  options:
+    max-size: "5m"
+    max-file: "1"
+  driver: json-file
+
+services:
+  zipcodes:
+    image: ghcr.io/apimgr/zipcodes:devel
+    container_name: zipcodes-test
+    hostname: zipcodes
+    restart: "no"
+    pull_policy: always
+    logging: *default-logging
+    environment:
+      ADDRESS: 0.0.0.0
+      CONFIG_DIR: /config/zipcodes
+      DATA_DIR: /data/zipcodes
+      DEBUG: true
+      LOGS_DIR: /data/log/zipcodes
+      MODE: development
+      PORT: 80
+      TZ: America/New_York
+    volumes:
+      - ./volumes/config:/config:z
+      - ./volumes/data:/data:z
+    ports:
+      - "172.17.0.1:64581:80"
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/zipcodes", "--port", "80", "--status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    networks:
+      - zipcodes-test
+
+networks:
+  zipcodes-test:
+    name: zipcodes-test
+    external: false

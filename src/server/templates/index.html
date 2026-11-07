@@ -16,7 +16,7 @@
             </div>
             <nav id="main-nav" class="header-center">
                 <a href="/">Search</a>
-                <a href="/openapi">API Docs</a>
+                <a href="/server/swagger">API Docs</a>
                 <a href="/graphql">GraphQL</a>
             </nav>
             <div class="header-right">
@@ -84,26 +84,34 @@
             <div class="endpoint-list">
                 <div class="endpoint">
                     <code>GET /api/v1/zipcodes.json</code>
-                    <p>Download complete dataset (340K+ records, 6.3MB)</p>
+                    <p>Download the embedded geographic ZIP dataset</p>
                 </div>
                 <div class="endpoint">
-                    <code>GET /api/v1/zipcode/search?q={query}</code>
+                    <code>GET /api/v1/zipcodes/search?q={query}</code>
                     <p>Search by zipcode, city, or state</p>
                 </div>
                 <div class="endpoint">
-                    <code>GET /api/v1/zipcode/{code}</code>
+                    <code>GET /api/v1/zipcodes/{code}</code>
                     <p>Get specific zipcode details</p>
                 </div>
                 <div class="endpoint">
-                    <code>GET /api/v1/zipcode/city/{city}</code>
+                    <code>GET /api/v1/zipcodes/city/{city}</code>
                     <p>Get all zipcodes for a city</p>
                 </div>
                 <div class="endpoint">
-                    <code>GET /api/v1/zipcode/state/{state}</code>
+                    <code>GET /api/v1/zipcodes/state/{state}</code>
                     <p>Get zipcodes for a state</p>
                 </div>
                 <div class="endpoint">
-                    <code>GET /api/v1/zipcode/autocomplete?q={query}</code>
+                    <code>GET /api/v1/zipcodes/nearby?zip=90210&amp;radius=10</code>
+                    <p>Find ZIP codes within a bounded radius</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/me</code>
+                    <p>Look up the caller IP using GeoIP when data is available</p>
+                </div>
+                <div class="endpoint">
+                    <code>GET /api/v1/zipcodes/autocomplete?q={query}</code>
                     <p>Get autocomplete suggestions</p>
                 </div>
             </div>
@@ -112,7 +120,7 @@
 
     <footer id="main-footer">
         <p>&copy; 2025 Zipcode Lookup. All rights reserved.</p>
-        <p>Data updated regularly. <a href="/api/v1/zipcode/stats">View Stats</a></p>
+        <p>ZIP data attribution and limitations: <a href="/server/about">About this dataset</a>. <a href="/api/v1/zipcodes/stats">View Stats</a></p>
     </footer>
 
     <script src="/static/js/main.js"></script>

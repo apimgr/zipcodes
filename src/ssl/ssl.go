@@ -193,7 +193,9 @@ func (cs *ChallengeServer) ServeHTTP(w http.ResponseWriter, r *http.Request) boo
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(auth))
+	if _, err := w.Write([]byte(auth)); err != nil {
+		return true
+	}
 	return true
 }
 

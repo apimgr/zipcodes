@@ -1,21 +1,37 @@
 name: zipcodes
 
+x-logging: &default-logging
+  options:
+    max-size: "5m"
+    max-file: "1"
+  driver: json-file
+
 services:
   zipcodes:
     image: ghcr.io/apimgr/zipcodes:latest
-    container_name: zipcodes
-    restart: unless-stopped
+    container_name: zipcodes-app
+    hostname: zipcodes
+    restart: always
+    pull_policy: always
+    logging: *default-logging
     environment:
-      # Hardcoded with sane defaults - NO .env files
-      - MODE=production
-      - TZ=America/New_York
-      # ENABLE_TOR=true is default, no need to specify
-    ports:
-      # Production: bound to Docker bridge only
-      - "172.17.0.1:64580:80"
+      ADDRESS: 0.0.0.0
+      CONFIG_DIR: /config/zipcodes
+      DATA_DIR: /data/zipcodes
+      LOGS_DIR: /data/log/zipcodes
+      PORT: 80
+      TZ: America/New_York
     volumes:
-      - ./rootfs/config/zipcodes:/config
-      - ./rootfs/data/zipcodes:/data
+      - ./volumes/config:/config:z
+      - ./volumes/data:/data:z
+    ports:
+      - "172.17.0.1:64580:80"
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/zipcodes", "--port", "80", "--status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
     networks:
       - zipcodes
 

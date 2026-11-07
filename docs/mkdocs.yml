@@ -36,8 +36,13 @@ theme:
 
 nav:
   - Home: index.md
-  - API Reference: API.md
-  - Server Guide: SERVER.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - API Reference: api.md
+  - CLI Reference: cli.md
+  - Security: security.md
+  - Integrations: integrations.md
+  - Development: development.md
   - GitHub: https://github.com/apimgr/zipcodes
 
 markdown_extensions:

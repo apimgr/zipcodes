@@ -131,7 +131,7 @@ func insertDefaultSettings(db *sql.DB) error {
 	}{
 		{"server.title", "Zipcodes", "string", "server", "Application display name"},
 		{"server.tagline", "US Postal Code Lookup API", "string", "server", "Short subtitle/slogan"},
-		{"server.description", "Fast and accurate US zipcode lookup API with 340,000+ zipcodes, GeoIP integration, and modern web interface.", "string", "server", "Full description"},
+		{"server.description", "Fast and accurate US zipcode lookup API with 33,100 geographic ZIP records, GeoIP integration, and modern web interface.", "string", "server", "Full description"},
 		{"server.timezone", "UTC", "string", "server", "Server timezone"},
 		{"server.date_format", "US", "string", "server", "Date format (US, EU, ISO)"},
 		{"server.time_format", "12-hour", "string", "server", "Time format (12-hour, 24-hour)"},

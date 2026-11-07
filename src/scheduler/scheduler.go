@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ type Task struct {
 	LastRun  time.Time
 	NextRun  time.Time
 	Enabled  bool
+	NextRunFunc func(time.Time) time.Time
 }
 
 // Scheduler manages periodic tasks
@@ -21,6 +23,7 @@ type Scheduler struct {
 	tasks   map[string]*Task
 	stop    chan struct{}
 	running bool
+	inFlight map[string]bool
 	mu      sync.RWMutex
 }
 
@@ -29,21 +32,25 @@ func New() *Scheduler {
 	return &Scheduler{
 		tasks: make(map[string]*Task),
 		stop:  make(chan struct{}),
+		inFlight: make(map[string]bool),
 	}
 }
 
 // AddTask adds a new task to the scheduler
 func (s *Scheduler) AddTask(name string, interval time.Duration, fn func() error) {
+	s.AddTaskAt(name, interval, time.Now().Add(interval), fn)
+}
+
+// AddTaskAt registers a task with a persisted or otherwise selected first run.
+func (s *Scheduler) AddTaskAt(name string, interval time.Duration, nextRun time.Time, fn func() error) {
+	s.AddTaskSchedule(name, interval, nextRun, nil, fn)
+}
+
+// AddTaskSchedule registers a task with a persisted first run and custom cadence.
+func (s *Scheduler) AddTaskSchedule(name string, interval time.Duration, nextRun time.Time, nextRunFunc func(time.Time) time.Time, fn func() error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	s.tasks[name] = &Task{
-		Name:     name,
-		Interval: interval,
-		Func:     fn,
-		NextRun:  time.Now().Add(interval),
-		Enabled:  true,
-	}
+	s.tasks[name] = &Task{Name: name, Interval: interval, Func: fn, NextRun: nextRun, Enabled: true, NextRunFunc: nextRunFunc}
 	log.Printf("Scheduler: Added task '%s' (interval: %v)", name, interval)
 }
 
@@ -88,7 +95,8 @@ func (s *Scheduler) Start() {
 	log.Printf("Scheduler: Started with %d tasks", len(s.tasks))
 
 	go func() {
-		ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
+		// Poll periodically for tasks that have become due.
+		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 
 		for {
@@ -116,55 +124,84 @@ func (s *Scheduler) Stop() {
 	s.running = false
 }
 
-// runDueTasks executes tasks that are due
+// runDueTasks executes due tasks independently and avoids overlapping runs.
 func (s *Scheduler) runDueTasks() {
 	s.mu.Lock()
 	now := time.Now()
 	dueTasks := make([]*Task, 0)
-
-	for _, task := range s.tasks {
-		if task.Enabled && now.After(task.NextRun) {
+	for name, task := range s.tasks {
+		if task.Enabled && !s.inFlight[name] && !now.Before(task.NextRun) {
+			s.inFlight[name] = true
 			dueTasks = append(dueTasks, task)
 		}
 	}
 	s.mu.Unlock()
 
 	for _, task := range dueTasks {
-		go func(t *Task) {
-			log.Printf("Scheduler: Running task '%s'", t.Name)
-			if err := t.Func(); err != nil {
-				log.Printf("Scheduler: Task '%s' failed: %v", t.Name, err)
-			} else {
-				log.Printf("Scheduler: Task '%s' completed", t.Name)
-			}
-
-			s.mu.Lock()
-			t.LastRun = time.Now()
-			t.NextRun = t.LastRun.Add(t.Interval)
-			s.mu.Unlock()
-		}(task)
+		go s.executeTask(task)
 	}
+}
+
+// executeTask isolates task failures and always advances the next run time.
+func (s *Scheduler) executeTask(task *Task) {
+	log.Printf("Scheduler: Running task '%s'", task.Name)
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			log.Printf("Scheduler: Task '%s' panicked: %v", task.Name, recovered)
+		}
+		s.mu.Lock()
+		task.LastRun = time.Now()
+		if task.NextRunFunc != nil {
+			task.NextRun = task.NextRunFunc(task.LastRun)
+		} else {
+			task.NextRun = task.LastRun.Add(task.Interval)
+		}
+		delete(s.inFlight, task.Name)
+		s.mu.Unlock()
+	}()
+	if err := task.Func(); err != nil {
+		log.Printf("Scheduler: Task '%s' failed: %v", task.Name, err)
+		return
+	}
+	log.Printf("Scheduler: Task '%s' completed", task.Name)
 }
 
 // RunNow immediately runs a task by name
 func (s *Scheduler) RunNow(name string) error {
-	s.mu.RLock()
+	s.mu.Lock()
 	task, ok := s.tasks[name]
-	s.mu.RUnlock()
-
 	if !ok {
+		s.mu.Unlock()
 		return nil
 	}
-
-	log.Printf("Scheduler: Running task '%s' immediately", name)
-	err := task.Func()
-
-	s.mu.Lock()
-	task.LastRun = time.Now()
-	task.NextRun = task.LastRun.Add(task.Interval)
+	if s.inFlight[name] {
+		s.mu.Unlock()
+		return fmt.Errorf("scheduled task %q is already running", name)
+	}
+	s.inFlight[name] = true
 	s.mu.Unlock()
 
-	return err
+	log.Printf("Scheduler: Running task '%s' immediately", name)
+	var taskErr error
+	func() {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				taskErr = fmt.Errorf("scheduled task %q panicked: %v", name, recovered)
+				log.Printf("Scheduler: %v", taskErr)
+			}
+			s.mu.Lock()
+			task.LastRun = time.Now()
+			if task.NextRunFunc != nil {
+				task.NextRun = task.NextRunFunc(task.LastRun)
+			} else {
+				task.NextRun = task.LastRun.Add(task.Interval)
+			}
+			delete(s.inFlight, name)
+			s.mu.Unlock()
+		}()
+		taskErr = task.Func()
+	}()
+	return taskErr
 }
 
 // GetTasks returns all registered tasks

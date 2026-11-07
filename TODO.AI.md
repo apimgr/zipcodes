@@ -21,3 +21,5 @@
 - [x] `docker build ... -f docker/Dockerfile` completed, and an isolated `--network none` runtime smoke check reached healthy `/healthz` through `--status`.
 - [ ] `docker/docker-compose.test.yml` does not yet include the ephemeral Valkey service required by AI.md because the current application has no Valkey client/config integration. Implement application cache support before adding the service; do not advertise an unused cache.
 - [ ] The CI Docker workflow applies OCI labels as well as annotations. Review and align its metadata behavior with the provider workflow requirements.
+- zipcodes: rename plural Go dirs src/paths and src/utils to singular
+- zipcodes: gofmt -l lists several src files needing formatting
