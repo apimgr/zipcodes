@@ -8,7 +8,7 @@ Run the `zipcodes` server binary and open `/` on its listener. The page supports
 
 ## Product data
 
-The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to commit `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. Telephone area-code assignments are unavailable from the source, so `area_codes` is empty. See [LICENSE.md](../LICENSE.md).
+The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to commit `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. Telephone area-code assignments are unavailable from the source, so `area_codes` is empty. See the [project license](https://github.com/apimgr/zipcodes/blob/main/LICENSE.md).
 
 ## Guides
 
@@ -21,4 +21,4 @@ The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs cu
 - [Development](development.md)
 - [Translating](translating.md)
 
-The project is MIT licensed. The ZIP dataset is separately licensed CC BY 4.0; see [LICENSE.md](../LICENSE.md) and [dataset attribution](../data/licenses/zipcodes-data.md).
+The project is MIT licensed. The ZIP dataset is separately licensed CC BY 4.0; see the [project license](https://github.com/apimgr/zipcodes/blob/main/LICENSE.md) and [dataset attribution](https://github.com/apimgr/zipcodes/blob/main/data/licenses/zipcodes-data.md).

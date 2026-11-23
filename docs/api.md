@@ -37,6 +37,10 @@ GeoIP is informational. Private or reserved addresses and unavailable databases 
 
 The matching browser pages are `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, and `/server/terms`. Their versioned API routes are `/api/v1/server/{about,help,healthz,privacy,terms}`.
 
+The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/security.txt`, and `/.well-known/security.txt`. The sitemap lists public HTML pages only; it does not list API endpoints.
+
+`/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints. `/.well-known/pgp-key.asc` returns 404 because this deployment has no security-report keypair.
+
 HTML pages support server-rendered search and require no JavaScript. Their shared theme preference is saved with a CSRF-protected `POST /server/theme` form; the selected theme is stored in a first-party cookie.
 
 `/healthz` is the machine health endpoint. The OpenAPI and GraphQL endpoints are described above. JSON responses use `ok` and `data` on success; errors use `ok`, `error`, `message`, and `details`.

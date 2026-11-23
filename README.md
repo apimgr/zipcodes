@@ -55,6 +55,8 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 - GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`.
 - Security contact: `/.well-known/security.txt`.
+- Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.
+- Empty Atom and RSS feeds: `/feed.xml` and `/rss.xml` (ZIP records have no per-record permalink or publication timestamp).
 
 All lookup endpoints are public and read-only. GeoIP is informational and does not affect ZIP lookups.
 

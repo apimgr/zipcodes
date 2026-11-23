@@ -7,7 +7,7 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.address` | `0.0.0.0` | Listener address |
 | `server.port` | selected at startup | Listener port |
 | `server.max_radius_miles` | `100` | Maximum accepted radius |
-| `server.baseurl` | `/` | Base path setting (route and asset prefix behavior should be confirmed before deployment under a subpath) |
+| `server.baseurl` | `/` | URL prefix used for browser routes and embedded assets when the application is mounted below a reverse proxy path |
 | `server.limits.max_body_size` | `10MB` | Maximum request body size |
 | `server.limits.read_timeout` | `30s` | HTTP read timeout |
 | `server.limits.write_timeout` | `30s` | HTTP and handler timeout |

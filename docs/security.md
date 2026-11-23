@@ -9,3 +9,5 @@ Per-IP request limits default to 120 read requests/minute, 10 non-read requests/
 Responses include content-type, framing, referrer, content-security, cross-origin, permissions, request ID, and permitted cross-domain policy headers. HSTS is returned only for direct TLS requests.
 
 Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/apimgr/zipcodes/security/advisories/new). The public `/.well-known/security.txt` endpoint lists the current contact and expiration date.
+
+`/.well-known/llms.txt` is generated from the public API route inventory and contains no private configuration. No PGP key endpoint is registered.
