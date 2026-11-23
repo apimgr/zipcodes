@@ -41,13 +41,13 @@ client_binary: zipcodes-cli
 
 ### Roles & permissions
 
-There are no user roles. All endpoints are public and require no authentication.
+There are no user roles. Lookup and server information endpoints are public and read-only; the AI.md-defined operator and owner tokens apply only to the server management features that use them.
 
 | Actor | Access |
 |-------|--------|
-| **Anonymous visitor (browser)** | Full read access to all web pages and API endpoints |
-| **Anonymous API client (curl/CLI)** | Full read access to all API endpoints |
-| **Server operator** | Configures server via `server.yml` only (max radius, GeoIP update schedule); no web management interface |
+| **Anonymous visitor (browser)** | Public search and server information pages |
+| **Anonymous API client (curl/CLI)** | Public read-only lookup routes subject to rate limits |
+| **Server operator** | Configures server through `server.yml` and operator CLI; no admin web panel |
 
 ### Data model & sensitivity
 
@@ -97,7 +97,26 @@ Failure mode for GeoIP: if the configured ip-location-db files are unavailable, 
 
 ### Security decisions & exceptions
 
-- **No authentication on any endpoint**: intentional. Public read-only reference API.
+- **No end-user accounts or login**: intentional. The operator token remains for server management features defined by AI.md.
 - **GeoIP databases downloaded at runtime**: intentional for size and freshness. DB-IP city data and NRO country/ASN attribution follow AI.md PART 19.
 - **GeoIP is informational only**: the caller's IP is a standard HTTP observable; GeoIP lookup results are not stored or logged.
 - **All responses include `Access-Control-Allow-Origin: *`**: intentional. Public data API designed for cross-origin browser use.
+
+### API routes
+
+Project-defined lookup routes use `/api/v1`; they are public and read-only, with rate limits defined by AI.md. Template-owned server routes are specified by AI.md and are not repeated in this inventory.
+
+- GET `/api/v1/zipcodes/{code}`: exact ZIP lookup; a five-digit code returns one ZIP record or a not-found response.
+- GET `/api/v1/zipcodes/search?q={query}`: search ZIP, city, state, or city/state; returns paginated matching records.
+- GET `/api/v1/zipcodes/autocomplete?q={query}`: return ZIP/city/state suggestions.
+- GET `/api/v1/zipcodes/nearby?zip={zip}&radius={miles}` or `?lat={lat}&lng={lng}&radius={miles}`: return nearby ZIP records and distances within the configured radius cap.
+- GET `/api/v1/zipcodes/city/{city}`: return paginated ZIP records for a city.
+- GET `/api/v1/zipcodes/state/{state}`: return paginated ZIP records for a state abbreviation.
+- GET `/api/v1/zipcodes/stats`: return dataset counts.
+- GET `/api/v1/zipcodes/random`: return one random ZIP record.
+- GET `/api/v1/zipcodes.json`: return the embedded ZIP dataset.
+- GET `/api/v1/zipcodes/{code}.txt`, `/api/v1/zipcodes/stats.txt`, `/api/v1/zipcodes/random.txt`: text representations of the corresponding lookup, statistics, and random record.
+- GET `/api/v1/me`: return caller IP and available GeoIP fields; location fields may be absent when GeoIP data is unavailable.
+- GET `/api/v1/geoip?ip={address}` and GET `/api/v1/geoip.txt?ip={address}`: return GeoIP lookup data in JSON or text.
+- POST `/api/v1/geoip/batch`: resolve a bounded batch of IP addresses and return their GeoIP results.
+Browser pages: `/` and `/search` provide ZIP search; `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, `/server/docs/graphql`, and `/graphql` provide public information, status, or API interfaces.

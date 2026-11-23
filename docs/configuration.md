@@ -7,7 +7,7 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.address` | `0.0.0.0` | Listener address |
 | `server.port` | selected at startup | Listener port |
 | `server.max_radius_miles` | `100` | Maximum accepted radius |
-| `server.baseurl` | `/` | Reserved path-prefix setting; route and asset prefixing remains incomplete |
+| `server.baseurl` | `/` | Base path setting (route and asset prefix behavior should be confirmed before deployment under a subpath) |
 | `server.limits.max_body_size` | `10MB` | Maximum request body size |
 | `server.limits.read_timeout` | `30s` | HTTP read timeout |
 | `server.limits.write_timeout` | `30s` | HTTP and handler timeout |
@@ -29,5 +29,13 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.rate_limit.health.window` | `60` | Health window in seconds |
 | `server.rate_limit.global_burst` | `240` | Global per-IP ceiling per minute |
 | `web-security.cors` | `*` | CORS origin for this public API |
+| `web-ui.theme` | `dark` | Default page theme |
+| `web-ui.logo` | empty | Optional configured logo value |
+| `web-ui.favicon` | empty | Optional configured favicon value |
+| `web-robots.allow` | `/`, `/api` | Paths listed as allowed in `robots.txt` |
+| `web-robots.deny` | `/debug` | Paths listed as disallowed in `robots.txt` |
+| `web-security.admin` | empty | Security contact used by `security.txt` when configured |
+
+Configuration is loaded from `server.yml`; there is no web settings panel or runtime mutation API. The CLI client has a separate `cli.yml` containing `server.primary`.
 
 Rate limit counters are persisted in the configured SQLite database (`server.db` by default). GeoIP is fail-open: a failed download is logged and does not prevent ZIP lookups. See [Security](security.md).

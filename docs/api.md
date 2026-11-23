@@ -1,21 +1,40 @@
 # API reference
 
-All API routes are public and read-only. JSON routes are under `/api/v1`; use `/api/v1/server/swagger` for interactive OpenAPI documentation and `/api/v1/server/openapi.json` for the specification.
+All lookup routes are public and read-only. The REST API base path is `/api/v1`. Interactive OpenAPI documentation is served at `/server/docs/swagger`; the OpenAPI JSON is `/api/v1/server/swagger` (also `/api/swagger`). The GraphQL interface is `/server/docs/graphql`; submit GraphQL queries to `/api/v1/server/graphql` or `/api/graphql` with GET or POST. The `/graphql` browser path is also available.
+
+## ZIP code routes
 
 | Method | Route | Purpose |
 |---|---|---|
-| GET | `/api/v1/zipcodes/{code}` | Exact five-digit ZIP lookup |
-| GET | `/api/v1/zipcodes/search?q=...` | ZIP, city, state, or city/state search |
-| GET | `/api/v1/zipcodes/city/{city}` | City lookup |
-| GET | `/api/v1/zipcodes/state/{state}` | State listing |
-| GET | `/api/v1/zipcodes/nearby?zip=90210&radius=10` | Radius search from a ZIP |
-| GET | `/api/v1/zipcodes/nearby?lat=34.09&lng=-118.41&radius=10` | Radius search from coordinates |
-| GET | `/api/v1/me` | Caller IP and available GeoIP fields |
-| GET | `/api/v1/zipcodes/stats` | Dataset counts |
-| GET | `/api/v1/zipcodes/random` | Random record |
-| GET | `/api/v1/zipcodes.json` | Embedded dataset |
-| POST | `/api/v1/graphql` | GraphQL query execution |
+| GET | `/api/v1/zipcodes/{code}` | Look up one five-digit ZIP code |
+| GET | `/api/v1/zipcodes/{code}.txt` | Plain text ZIP lookup |
+| GET | `/api/v1/zipcodes/search?q={query}` | Search ZIP, city, state, or city/state |
+| GET | `/api/v1/zipcodes/autocomplete?q={query}` | Return suggestions |
+| GET | `/api/v1/zipcodes/city/{city}` | List ZIP codes for a city |
+| GET | `/api/v1/zipcodes/state/{state}` | List ZIP codes for a state abbreviation |
+| GET | `/api/v1/zipcodes/nearby?zip={zip}&radius={miles}` | Search around an origin ZIP |
+| GET | `/api/v1/zipcodes/nearby?lat={lat}&lng={lng}&radius={miles}` | Search around coordinates |
+| GET | `/api/v1/zipcodes/stats` | Return dataset counts |
+| GET | `/api/v1/zipcodes/stats.txt` | Return dataset counts as text |
+| GET | `/api/v1/zipcodes/random` | Return a random ZIP record |
+| GET | `/api/v1/zipcodes/random.txt` | Return a random record as text |
+| GET | `/api/v1/zipcodes.json` | Download the full embedded dataset |
 
-Radius values must be greater than zero and no more than the configured maximum, which is capped at 100 miles. Coordinate bounds are latitude -90..90 and longitude -180..180. The `/api/v1/me` endpoint returns the IP only when GeoIP is unavailable or the address is not globally routable. GeoIP data is sourced from DB-IP and NRO through the CC BY 4.0 ip-location-db MMDB files.
+Radius must be greater than zero and may not exceed the server's configured maximum (100 miles by default). Coordinate inputs are bounded to latitude -90..90 and longitude -180..180. ZIP codes must contain exactly five digits.
 
-REST success responses use `ok: true` and `data`; errors use `ok: false`, an error code, a message, and details. List endpoints accept `page` (default `1`) and `limit` (default `250`, maximum `250`). Responses include a `pagination` object with `page`, `limit`, `total`, and `pages`. Exact ZIP lookups are single-record responses. `/api/v1/zipcodes.json` intentionally returns the full wrapped dataset.
+## GeoIP routes
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/api/v1/me` | Return the caller IP and available location data |
+| GET | `/api/v1/geoip?ip={address}` | Look up an IP address |
+| GET | `/api/v1/geoip.txt?ip={address}` | Text form of an IP lookup |
+| POST | `/api/v1/geoip/batch` | Look up a bounded batch of IP addresses |
+
+GeoIP is informational. Private or reserved addresses and unavailable databases may produce IP-only results. ZIP lookups do not depend on GeoIP availability.
+
+## Server information routes
+
+The matching browser pages are `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, and `/server/terms`. Their versioned API routes are `/api/v1/server/{about,help,healthz,privacy,terms}`.
+
+`/healthz` is the machine health endpoint. The OpenAPI and GraphQL endpoints are described above. JSON responses use `ok` and `data` on success; errors use `ok`, `error`, `message`, and `details`.
