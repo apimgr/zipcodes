@@ -37,4 +37,6 @@ GeoIP is informational. Private or reserved addresses and unavailable databases 
 
 The matching browser pages are `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, and `/server/terms`. Their versioned API routes are `/api/v1/server/{about,help,healthz,privacy,terms}`.
 
+HTML pages support server-rendered search and require no JavaScript. Their shared theme preference is saved with a CSRF-protected `POST /server/theme` form; the selected theme is stored in a first-party cookie.
+
 `/healthz` is the machine health endpoint. The OpenAPI and GraphQL endpoints are described above. JSON responses use `ok` and `data` on success; errors use `ok`, `error`, `message`, and `details`.

@@ -1,6 +1,6 @@
 ## Project description
 
-Zipcodes is a full-stack Go web application providing US postal code lookups and geographic queries across 340,000+ ZIP codes through a versioned REST API, GraphQL endpoint, and a server-side rendered web UI. Each ZIP code record includes city, state, county, coordinates, timezone, and telephone area codes. GeoIP integration auto-detects the caller's approximate location. ZIP code data is stored in an indexed embedded SQLite database for sub-10ms query times. A companion CLI tool enables lookups from the terminal. Deployed as a single self-contained static binary.
+Zipcodes is a Go web application providing US ZIP-code lookups and geographic queries through a versioned REST API, GraphQL endpoint, and server-rendered search UI. The checked-in source currently contains 33,100 geographic ZIP records with city, state, county, coordinates, and timezone. Its source does not provide telephone area-code assignments, so `area_codes` is empty. Optional GeoIP lookup resolves the caller's approximate location. ZIP records are loaded into SQLite at runtime. A companion CLI enables lookups from the terminal.
 
 ## Project variables
 
@@ -19,7 +19,8 @@ client_binary: zipcodes-cli
 ### Product scope & non-goals
 
 **In scope:**
-- 340,000+ US ZIP codes with city, state, county, coordinates, IANA timezone identifier, and telephone area codes
+- 33,100 US geographic ZIP records from the checked-in Ready APIs curated-us-zips source, with city, state, county, coordinates, and IANA timezone identifier
+- No telephone area-code dataset is currently available from the checked-in source; `area_codes` remains empty
 - ZIP code lookup by postal code (exact match)
 - City name search (optional state filter)
 - State-level listing by abbreviation
@@ -28,8 +29,8 @@ client_binary: zipcodes-cli
 - Full web frontend (server-side Go templates, dark/light/auto theme, PWA, mobile-first)
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`
 - CLI client (`zipcodes-cli`) for terminal lookup: `zipcodes-cli 90210`
-- OpenAPI/Swagger docs at `/api/{api_version}/server/swagger`
-- GraphQL at `/graphql`
+- OpenAPI JSON at `/api/{api_version}/server/swagger` with a server-rendered reference at `/server/docs/swagger`
+- GraphQL API at `/api/{api_version}/server/graphql` and a no-JavaScript form at `/server/docs/graphql`
 
 **Non-goals:**
 - No user accounts, registration, or login of any kind
@@ -48,6 +49,8 @@ There are no user roles. Lookup and server information endpoints are public and 
 | **Anonymous visitor (browser)** | Public search and server information pages |
 | **Anonymous API client (curl/CLI)** | Public read-only lookup routes subject to rate limits |
 | **Server operator** | Configures server through `server.yml` and operator CLI; no admin web panel |
+
+AI.md also defines anonymous owner/linked API tokens and shared server pages. Those template-owned capabilities are separate from product accounts and must not be described as user registration or login.
 
 ### Data model & sensitivity
 
@@ -119,4 +122,4 @@ Project-defined lookup routes use `/api/v1`; they are public and read-only, with
 - GET `/api/v1/me`: return caller IP and available GeoIP fields; location fields may be absent when GeoIP data is unavailable.
 - GET `/api/v1/geoip?ip={address}` and GET `/api/v1/geoip.txt?ip={address}`: return GeoIP lookup data in JSON or text.
 - POST `/api/v1/geoip/batch`: resolve a bounded batch of IP addresses and return their GeoIP results.
-Browser pages: `/` and `/search` provide ZIP search; `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, `/server/docs/graphql`, and `/graphql` provide public information, status, or API interfaces.
+Browser pages currently registered by the application: `/` and `/search` provide ZIP search; `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, `/server/docs/graphql`, and `/graphql` provide public information, status, or API interfaces. AI.md additionally requires its shared server-page registry and template-owned pages, which remain part of implementation scope.
