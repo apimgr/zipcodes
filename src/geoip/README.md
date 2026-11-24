@@ -12,4 +12,4 @@ Visible attribution is included on `/server/about`:
 
 Country and ASN data are PDDL and require no attribution.
 
-The application refreshes enabled databases on the configured schedule. The next run time and the most recent 1,000 task results persist in the SQLite database.
+The application refreshes enabled databases on the configured schedule and records each successful update in `.last_updated`. The previous databases remain available after update failures; their health status becomes degraded only after the recorded successful update is more than 21 days old. The next run time and the most recent 1,000 task results persist in the SQLite database.
