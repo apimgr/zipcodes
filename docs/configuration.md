@@ -12,6 +12,7 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.max_radius_miles` | `100` | Maximum accepted radius |
 | `server.baseurl` | `/` | URL prefix used for browser routes and embedded assets when the application is mounted below a reverse proxy path |
 | `server.healthz.root.enabled` | `false` | Mount `/healthz` as a root-level alias to the `/server/healthz` frontend |
+| `server.tokens.max_linked` | `25` | Maximum active linked API tokens per owner; zero disables the limit |
 | `server.limits.max_body_size` | `10MB` | Maximum request body size |
 | `server.limits.read_timeout` | `30s` | HTTP read timeout |
 | `server.limits.write_timeout` | `30s` | HTTP and handler timeout |
@@ -57,6 +58,6 @@ The server reads `server.yml` in its configuration directory. `CONFIG_DIR`, `DAT
 
 Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. The server creates this file with owner-only permissions (`0600`); on first startup it prints the generated operator token once. Protect and back up the secret file as sensitive data.
 
-Server configuration is operator-controlled through files and command-line options. Browser theme preferences are separate visitor state and do not change server configuration. The CLI client has a separate `cli.yml` containing `server.primary`.
+Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate `cli.yml` containing `server.primary`.
 
 Rate limit counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. GeoIP is fail-open: a failed download is logged and does not prevent ZIP lookups. See [Security](security.md).
