@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/apimgr/zipcodes/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/zipcodes/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/apimgr/zipcodes)](LICENSE.md)
-[![Documentation](https://readthedocs.org/projects/zipcodes/badge/?version=latest)](https://zipcodes.readthedocs.io/)
+[![Documentation](https://readthedocs.org/projects/apimgr-zipcodes/badge/?version=latest)](https://apimgr-zipcodes.readthedocs.io/)
 
 Zipcodes is a public, read-only US ZIP code lookup service. It provides a server-rendered search page, a versioned REST API, a read-only GraphQL endpoint, optional caller GeoIP lookup, and a companion CLI.
 
@@ -13,6 +13,7 @@ Zipcodes is a public, read-only US ZIP code lookup service. It provides a server
 - Server-rendered search interface and installable PWA shell.
 - Optional GeoIP lookup for the caller or supplied IP addresses.
 - Companion CLI and embedded, indexed ZIP data.
+- Six embedded locale catalogs: English (`en`), Spanish (`es`), French (`fr`), Arabic (`ar`), German (`de`), and Italian (`it`). See the [translation guide](docs/translating.md).
 
 The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. The source does not provide telephone area codes, so `area_codes` is empty. See [LICENSE.md](LICENSE.md) for attribution.
 
@@ -53,7 +54,7 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 - REST API: `/api/v1/` (see [API reference](docs/api.md)).
 - OpenAPI JSON and UI: `/api/v1/server/swagger` and `/server/docs/swagger`.
 - GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
-- Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`.
+- Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
 - Security contact: `/.well-known/security.txt`.
 - Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.
 - Empty Atom and RSS feeds: `/feed.xml` and `/rss.xml` (ZIP records have no per-record permalink or publication timestamp).

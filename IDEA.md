@@ -13,6 +13,7 @@ repo: https://github.com/apimgr/zipcodes
 license: MIT
 binary: zipcodes
 client_binary: zipcodes-cli
+owner_token: zipcodes_owner_token_qwhzkfta
 
 ## Business logic
 

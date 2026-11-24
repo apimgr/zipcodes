@@ -1,10 +1,22 @@
 # Zipcodes
 
-Zipcodes is a public, read-only service for U.S. ZIP lookup, city/state search, and bounded geographic radius queries. The server renders the browser interface and exposes versioned JSON routes, GraphQL, and a companion CLI.
+Zipcodes is a public, read-only service for U.S. ZIP lookup, city/state search, and bounded geographic radius queries. It includes server-rendered search pages, a versioned REST API, GraphQL, OpenAPI documentation, optional caller GeoIP, and a companion CLI.
 
 ## Quick start
 
-Run the `zipcodes` server binary and open `/` on its listener. The page supports server-rendered search without requiring JavaScript. The companion CLI connects to an explicitly configured server.
+With Docker Compose:
+
+```sh
+docker compose -f docker/docker-compose.yml up -d
+```
+
+Open `http://172.17.0.1:64580/` on the Docker host. For a native run, download the release binary, then start it with `./zipcodes --port 8080` and open `http://127.0.0.1:8080/`. The search page works without JavaScript. See the [installation guide](installation.md) for persistent storage and service setup.
+
+The companion CLI connects to an explicitly configured server:
+
+```sh
+zipcodes-cli --server http://127.0.0.1:8080 90210
+```
 
 ## Product data
 
@@ -22,3 +34,8 @@ The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs cu
 - [Translating](translating.md)
 
 The project is MIT licensed. The ZIP dataset is separately licensed CC BY 4.0; see the [project license](https://github.com/apimgr/zipcodes/blob/main/LICENSE.md) and [dataset attribution](https://github.com/apimgr/zipcodes/blob/main/data/licenses/zipcodes-data.md).
+
+## Links
+
+- [Repository](https://github.com/apimgr/zipcodes)
+- On a running instance: `/server/docs/swagger` (OpenAPI) and `/server/docs/graphql` (GraphQL)
