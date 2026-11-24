@@ -20,7 +20,7 @@ The client stores `cli.yml` under the operating system's per-user configuration 
 | `--shell completions [SHELL]` | Print completions for bash, zsh, fish, sh, dash, ksh, PowerShell, or pwsh |
 | `--shell init [SHELL]` | Print the shell initialization command |
 
-Display mode is detected automatically. With no command, an interactive terminal opens the repeated lookup interface; enter `q`, `quit`, or `exit` to leave. A command argument always selects plain CLI mode. `TERM=dumb` and headless runs do not start the interface. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`; because the default static client does not include native GUI support, `gui` uses the TUI when a terminal is available and otherwise reports `gui_unavailable`.
+Display mode is detected automatically. With no command, an interactive terminal opens the Bubble Tea lookup screen. Enter a ZIP code and press Enter; use `q` or Escape to leave. A command argument always selects plain CLI mode. `TERM=dumb` and headless runs do not start the interface. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`; because the default static client does not include native GUI support, `gui` uses the TUI when a terminal is available and otherwise reports `gui_unavailable`.
 
 In CLI mode, the command accepts exactly one ZIP argument containing five digits. For example:
 
@@ -28,7 +28,7 @@ In CLI mode, the command accepts exactly one ZIP argument containing five digits
 zipcodes-cli --server http://localhost:8080 90210
 ```
 
-The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. It uses `server.primary`, `auth.token`, `display.mode` (`auto` by default), and `theme.mode` (`auto` by default). Token priority is `--token`, `ZIPCODES_TOKEN`, then `auth.token`; the environment variable never saves to the file. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when `auth.token` is empty or invalid. If no server is configured in an interactive terminal, the setup prompt tests the entered URL, optionally validates a token, and saves the connection before continuing.
+The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. It uses `server.primary`, `auth.token`, `display.mode` (`auto` by default), and `theme.mode` (`auto` by default). Token priority is `--token`, `ZIPCODES_TOKEN`, then `auth.token`; the environment variable never saves to the file. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when `auth.token` is empty or invalid. If no server is configured in an interactive terminal, the Bubble Tea setup screen tests the URL, optionally validates a token, and saves the connection before continuing.
 
 Before a lookup, the client reads the server's autodiscovery document. If `server.update.cli_min_version` is set and the client version is older, the client refuses the lookup and prints the required version and update command.
 
