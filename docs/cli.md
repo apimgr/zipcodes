@@ -26,4 +26,8 @@ zipcodes-cli --server https://your-server.example 90210
 
 ## Server options
 
-The `zipcodes` server binary accepts `--help`, `--version`, and `--status`; `--address`, `--port`, `--config`, `--data`, and `--logs`; `--mode`, `--debug`, and `--color`; `--update stable|beta|nightly`; `--service install|uninstall|start|stop|restart|status`; and `--maintenance on|off`. Run `zipcodes --help` for the current usage text. Shell completions are available from the server binary with the same `--shell` commands listed above.
+The `zipcodes` server binary accepts `--help`, `--version`, and `--status`; `--address`, `--port`, `--config`, `--data`, and `--logs`; `--mode`, `--debug`, and `--color`; `--update [yes|check|branch stable|beta|devel]`; `--service install|uninstall|start|stop|restart|status`; and `--maintenance on|off|update|backup|restore`. `--update` defaults to `yes`; `--maintenance update` is an alias. Run `zipcodes --update check` to check without installing. Installing requires an elevated process. `--update branch {stable|beta|devel}` persists the channel in the server configuration. Branch aliases `daily`, `rolling`, `dev`, and `development` are normalized to `devel`.
+
+The scheduled `update_check` task runs daily at 06:00. It checks stable releases by default; beta and devel channels include all more stable releases. `server.update.defer_days` delays scheduled stable/beta notices and installs, while manual checks ignore the delay. `server.update.auto_install` is disabled by default. Update notices are operator-only and never appear in public API responses.
+
+Automatic staged restarts rely on systemd, launchd, runit, s6, or rc.d supervising exit code 75. OpenRC and SysV leave a verified update staged until the next service or system start. Windows services do not auto-install; run the update command from an elevated prompt when appropriate.

@@ -8,7 +8,10 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.port` | selected at startup | Listener port |
 | `server.fqdn` | empty | Public hostname supplied by the operator |
 | `server.mode` | `production` | Application mode |
-| `server.update_branch` | `stable` | Reserved setting; update commands currently select their branch from the command argument |
+| `server.update.branch` | `stable` | Release channel: `stable`, `beta`, or `devel`; aliases normalize to `devel` |
+| `server.update.auto_install` | `false` | Let the scheduled update check stage eligible releases when the process started elevated |
+| `server.update.defer_days` | `0` | Delay scheduled stable/beta updates by 0–365 days; manual checks ignore this value |
+| `server.update.cli_min_version` | `""` | Operator-managed minimum client version advertised by autodiscovery |
 | `server.max_radius_miles` | `100` | Maximum accepted radius |
 | `server.baseurl` | `/` | URL prefix used for browser routes and embedded assets when the application is mounted below a reverse proxy path |
 | `server.healthz.root.enabled` | `false` | Mount `/healthz` as a root-level alias to the `/server/healthz` frontend |
@@ -44,6 +47,25 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.metrics.include_runtime` | `true` | Includes Go runtime gauges and GC counters |
 | `server.metrics.loki.max_entries` | `1000` | Maximum recent structured HTTP log entries returned by Loki endpoint |
 | `server.metrics.loki.max_age` | `1h` | Maximum age of entries returned by the Loki endpoint |
+| `server.backup.retention.max_backups` | `1` | Number of daily full backups to retain (minimum 1) |
+| `server.backup.retention.keep_weekly` | `0` | Additional Sunday full backups to retain |
+| `server.backup.retention.keep_monthly` | `0` | First-of-month full backups to retain |
+| `server.backup.retention.keep_yearly` | `0` | January 1 full backups to retain |
+| `server.backup.retention.max_total_size` | `10%` | Backup-volume size cap, as a percentage or byte size; `0` disables it |
+| `server.restore.max_archive_size` | `1G` | Maximum accepted backup archive size |
+| `server.restore.max_expanded_size` | `4G` | Maximum total extracted size |
+| `server.restore.max_files` | `10000` | Maximum archive file count |
+| `server.restore.max_file_size` | `512M` | Maximum size of one extracted file |
+| `server.restore.max_ratio` | `100` | Maximum expanded-to-compressed ratio |
+| `server.scheduler.timezone` | `America/New_York` | IANA timezone used for scheduled backups |
+| `server.scheduler.catch_up_window` | `1h` | Maximum age of a missed scheduled run to execute on startup |
+| `server.scheduler.tasks.backup_daily.enabled` | `true` | Enables the daily backup task |
+| `server.scheduler.tasks.backup_daily.schedule` | `0 2 * * *` | Daily backup schedule in the configured timezone |
+| `server.scheduler.tasks.backup_hourly.enabled` | `false` | Enables hourly incremental backups |
+| `server.scheduler.tasks.backup_hourly.schedule` | `@hourly` | Hourly incremental schedule |
+| `server.scheduler.tasks.update_check.enabled` | `true` | Enables the daily operator-only update check |
+| `server.scheduler.tasks.update_check.schedule` | `0 6 * * *` | Daily update check schedule |
+| `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
 | `server.logging.access_format` | `apache` | Reserved setting; currently has no effect |
@@ -68,6 +90,11 @@ While running, the configuration manager checks `server.yml`, `yaml.d/`, `secret
 
 ```yaml
 server:
+  update:
+    branch: stable
+    auto_install: false
+    defer_days: 0
+    cli_min_version: ""
   branding:
     title: Zipcodes API
     content:
@@ -81,7 +108,13 @@ server:
 
 Header and footer content accepts sanitized HTML. The about, privacy, and terms entries accept `html`, `md`, or `txt`; each body may be a single string or a language map with a `default` fallback. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, and `PORT` and `ADDRESS` override listener settings. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
 
+The database currently supports local SQLite only. `server.database.url` selects its file path and defaults to `{data_dir}/db/server.db`; `DB_PATH` takes precedence. The read pool defaults to 25 open and 5 idle connections, a 5 minute maximum lifetime, and a 1 minute maximum idle time. SQLite uses a dedicated single-connection write pool, WAL, `synchronous=NORMAL`, a 10 second busy timeout, and read-only query connections. Place the database on local storage; network and FUSE filesystems are unsupported. Remote libSQL/Turso is not available in this build.
+
 Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token), `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values), and separate `server.metrics.auth.tokens.prometheus`, `.grafana`, and `.loki` credentials. The server creates these metric service tokens using the `mtr_` prefix and writes the file with owner-only permissions (`0600`); on first startup it prints the generated operator token once, but never prints metrics tokens. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed.
+
+Backup encryption uses the operator-managed `server.backup.encryption_password` key in `secrets.yml`; it is never generated automatically. Without a password, backups are unencrypted and startup logs a warning. When any compliance standard is enabled, backup creation is refused until a password is configured. Backups are written under `BACKUP_DIR` when set, otherwise to the platform backup location with a data-directory fallback. `--backup` overrides that directory. Run `zipcodes --maintenance backup [filename]` for a manual backup, `zipcodes --maintenance backup test [file]` to verify one, and `zipcodes --maintenance restore <file>` for a CLI-only restore. Restore prompts for an encrypted archive password without echoing it and applies restore size limits. A nonempty restore requires root confirmation or the service account plus the operator token. `--include-ssl` and `--include-data` add those optional content groups to a manual backup.
+
+Retention is applied at startup and after backups. The daily scheduler defaults to 02:00 in `server.scheduler.timezone`; hourly incrementals are disabled by default. A scheduled backup is skipped when free space is below twice the previous full backup size or disk use is above `server.maintenance.cleanup.disk_threshold`. This application currently uses a local SQLite database and has no remote libSQL/Turso connection or remote restore-seeding implementation.
 
 Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate `cli.yml` containing `server.primary`.
 
