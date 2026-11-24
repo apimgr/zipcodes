@@ -18,6 +18,8 @@ The companion CLI connects to an explicitly configured server:
 zipcodes-cli --server http://127.0.0.1:8080 90210
 ```
 
+Run `zipcodes-cli --tui` to perform repeated lookups in an interactive terminal session.
+
 ## Product data
 
 The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to commit `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. Telephone area-code assignments are unavailable from the source, so `area_codes` is empty. See the [project license](https://github.com/apimgr/zipcodes/blob/main/LICENSE.md).

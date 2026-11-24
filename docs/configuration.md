@@ -65,6 +65,16 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.scheduler.tasks.backup_hourly.schedule` | `@hourly` | Hourly incremental schedule |
 | `server.scheduler.tasks.update_check.enabled` | `true` | Enables the daily operator-only update check |
 | `server.scheduler.tasks.update_check.schedule` | `0 6 * * *` | Daily update check schedule |
+| `server.notifications.email.smtp.host` | autodetected | SMTP relay hostname or IP; an empty value triggers first-run detection |
+| `server.notifications.email.smtp.port` | `587` | SMTP relay port; automatic TLS uses implicit TLS on 465 and STARTTLS negotiation on other ports |
+| `server.notifications.email.smtp.username` | empty | SMTP username; AUTH is used only after TLS is established |
+| `server.notifications.email.smtp.password` | empty | SMTP password, stored as a secret and never logged |
+| `server.notifications.email.smtp.tls` | `auto` | SMTP TLS mode: `auto`, `tls`, `starttls`, or `none` |
+| `server.notifications.email.from.name` | application name | Sender display name |
+| `server.notifications.email.from.email` | `no-reply@{fqdn}` | Sender address; defaults to `no-reply@localhost` when no FQDN is available |
+| `server.notifications.email.reply_to` | empty | Optional Reply-To address |
+| `server.notifications.email.events.*` | event-specific | Per-event operator email switches; SMTP must be configured and reachable |
+| `server.contact.admin.email` | empty | Operator notification recipient; `admin@{fqdn}` is used when a configured FQDN is available |
 | `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
@@ -85,6 +95,8 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
 
 The server reads `server.yml` and then merges `yaml.d/*.yml` and `yaml.d/*.yaml` in filename order. `yaml.d/branding.yml` holds `server.branding.*` settings. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. For example:
+
+SMTP settings can be overridden by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TLS`, `SMTP_FROM_NAME`, and `SMTP_FROM_EMAIL`. The SMTP password is sensitive configuration and must remain in `secrets.yml` or the environment rather than being exposed in status output or logs.
 
 While running, the configuration manager checks `server.yml`, `yaml.d/`, `secrets.yml`, and `assets/` every five seconds. A valid change reloads the merged configuration. A malformed file keeps its last successfully parsed contents; malformed first-time files are ignored. Changes to `server.port`, `server.address`, `server.daemonize`, or the SSL, database, and Tor settings are reported as requiring a restart. Check `/server/healthz` or run `zipcodes --status` to see pending restart state and the affected settings.
 
@@ -116,6 +128,6 @@ Backup encryption uses the operator-managed `server.backup.encryption_password` 
 
 Retention is applied at startup and after backups. The daily scheduler defaults to 02:00 in `server.scheduler.timezone`; hourly incrementals are disabled by default. A scheduled backup is skipped when free space is below twice the previous full backup size or disk use is above `server.maintenance.cleanup.disk_threshold`. This application currently uses a local SQLite database and has no remote libSQL/Turso connection or remote restore-seeding implementation.
 
-Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate `cli.yml` containing `server.primary`.
+Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate per-user `cli.yml` containing `server.primary` and `ui.theme` (dark by default).
 
 Rate limit counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).

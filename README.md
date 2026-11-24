@@ -31,6 +31,8 @@ The `zipcodes-cli` client performs exact ZIP lookups against an operator-selecte
 zipcodes-cli --server https://your-server.example 90210
 ```
 
+Use `zipcodes-cli --tui` for interactive repeated lookups. Its terminal theme defaults to dark and can be selected with `--theme dark|light|auto`.
+
 Set `ZIPCODES_SERVER_PRIMARY` or `server.primary` in `cli.yml` to save the server choice. This project does not define a hosted endpoint.
 
 ## Search

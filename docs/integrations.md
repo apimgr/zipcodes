@@ -18,6 +18,18 @@ The project does not provide webhooks, identity federation, user accounts, or a 
 
 GeoIP database downloads are an optional feature used for caller/IP lookup. The server fetches the fixed ip-location-db assets over HTTPS into `{data_dir}/security/geoip` and verifies release SHA-256 checksums before replacement; an unavailable dataset leaves ZIP lookup functionality available and country restrictions fail open.
 
+## Email notifications
+
+Operator email uses the configured SMTP relay. On first run, an empty SMTP host triggers ordered detection of loopback, Docker bridge, default gateway, detected FQDN, public IPv4, and the `mail.` and `smtp.` FQDNs on ports 25, 465, and 587. A successful EHLO probe selects the relay. Startup and configuration reloads probe it again. If no working relay is available, email is disabled and messages are neither sent nor queued; ZIP lookup remains available.
+
+`server.notifications.email.smtp.tls: auto` uses implicit TLS only on port 465. On other ports the client starts with SMTP/EHLO and upgrades with STARTTLS when offered. Authentication credentials are never sent unless TLS is active. Explicit modes are `tls`, `starttls`, and `none`. Certificate verification is relaxed only for configured private IP literals; hostnames remain verified even if DNS resolves them to a private address. `SMTP_*` environment variables override the corresponding YAML settings.
+
+Built-in operator templates are embedded under `src/server/template/email/`. Overrides belong in `{config_dir}/template/email/{template}.tmpl`; each has a `Subject:` line, a `---` separator, and a plain-text body using `{variable}` substitutions. Overrides are read on each render, so edits take effect without restarting. Removing an override restores the embedded version. Unknown variables, empty subjects/bodies, malformed syntax, and header line breaks reject the override or message. The message is delivered separately to each recipient and contains plain-text and HTML MIME alternatives. There are no account, login, password-reset, or verification emails.
+
+Callers translate subject and body strings before rendering, then supply the translated values as ordinary variables. The template engine does not execute translation functions. Integrations should pass event context through the notification event hooks and must keep recipient selection in the owning security/contact subsystem.
+
+Scheduled task failures send the `scheduler_error` template when that event is enabled. Backup and SSL renewal failures use their dedicated templates when enabled, preventing duplicate generic failure messages.
+
 ## Monitoring
 
 Prometheus metrics are served at `/server/metrics` and `/server/metrics/prometheus`; `/metrics` is enabled as a scrape-friendly alias by default. Grafana dashboard JSON is available at `/server/metrics/grafana`, and recent sanitized HTTP log events are available as Loki streams at `/server/metrics/loki`. The same service routes are mounted under the configured API version and `/api/metrics` aliases.
