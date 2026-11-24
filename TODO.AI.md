@@ -4,7 +4,7 @@ These tasks track verified work against `AI.md`. They remain open until the impl
 
 ## Security and contact workflows
 
-- [ ] Implement project OpenPGP key generation, encrypted private-key storage, export/import/delete, publication, rotation, and crash recovery from PART 11.
+- [ ] Complete project OpenPGP key generation, encrypted private-key storage, export/import/delete, publication, rotation, and crash recovery from PART 11. Rotation now stores the new key fingerprint and metadata in the same DB transaction as report re-encryption, and recovery uses that marker even when no reports exist; still verify remaining key lifecycle, signing, and export contracts.
 - [x] Complete security-report maintenance list/show/export/update workflows, audit events, status notifications, and retention behavior from PART 11. Verified against `src/security_commands.go`, `src/database/security_reports.go`, scheduled cleanup in `src/main.go`, command tests, and `docs/security.md`/`docs/cli.md`.
 - [ ] Complete contact workflow requirements from PARTS 11, 12, and 16, including provider CAPTCHA/no-JavaScript paths, edit/retry behavior, PGP fallback, and exact field/API errors.
 - [ ] Complete project privacy, preference-language, and preference-sync behavior after resolving the conflicting `AI.md` directives with the coordinator; cookie-consent persistence now uses cookie-safe encoded JSON and its consent gate is covered by browser E2E.
@@ -15,6 +15,7 @@ These tasks track verified work against `AI.md`. They remain open until the impl
 - [ ] Complete owner and linked token lifecycle, preferences pages, and sync contract from PARTS 11 and 16.
 - [ ] Complete MCP route/tool behavior and annotations from PART 11, including the sync-import method conflict recorded for coordinator review.
 - [ ] Complete remote database support, backup rotation/incremental behavior, and secrets rotation from PARTS 10, 11, and 21.
+- [x] Add the versioned API root index and canonical trailing-slash redirect required by PARTS 1 and 14. The root returns request-aware links and is included in OpenAPI; server tests cover the response and `301` location.
 - [ ] Complete service installation, update, and cross-platform binary behavior from PARTS 23–25.
 - [ ] Complete TLS, Tor, I2P, and overlay lifecycle behavior from PARTS 30–31.
 
