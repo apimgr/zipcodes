@@ -180,6 +180,24 @@ server:
     twitter:
       enabled: true
       card: summary_large_image
+  cache:
+    type: memory
+    url: ""
+    host: localhost
+    port: 6379
+    username: ""
+    password: ""
+    db: 0
+    tls: false
+    tls_skip_verify: true
+    tls_ca: ""
+    tls_cert: ""
+    tls_key: ""
+    pool_size: 10
+    min_idle: 2
+    timeout: 5s
+    prefix: "zipcodes:"
+    ttl: 1h
 web:
   ui:
     theme: dark
@@ -192,7 +210,7 @@ SQLite is the default. Its URL is a local path and defaults to `{data_dir}/db/se
 
 For a remote libSQL/Turso database, set `server.database.driver: libsql` and use either `libsql://host` with `?authToken=...` in the URL or an `https://host` URL plus `server.database.token` in `secrets.yml`. Plain `http://` is accepted only for loopback or private hosts, including hostnames that resolve exclusively to private addresses. The URL takes precedence when it already contains `authToken`. `DATABASE_URL` initializes the saved connection on first run only; set `DATABASE_DRIVER` when the URL does not select a driver by scheme. Remote tables and indexes use the `srv_` prefix. The URL token and separate token are secrets: never include them in logs or public configuration output. Remote database contents are managed and backed up by the provider; local backup archives do not contain the remote database.
 
-Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token), `server.database.token` (remote libSQL token when kept separate from the URL), `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values and security-report contact metadata), and separate `server.metrics.auth.tokens.prometheus`, `.grafana`, and `.loki` credentials. The server creates these metric service tokens using the `mtr_` prefix and writes the file with owner-only permissions (`0600`); on first startup it prints the generated operator token once, but never prints metrics tokens. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed and prevents security-report status notices from being sent.
+Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token), `server.database.token` (remote libSQL token when kept separate from the URL), `server.cache.password` and credential-bearing `server.cache.url`, `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values and security-report contact metadata), and separate `server.metrics.auth.tokens.prometheus`, `.grafana`, and `.loki` credentials. The server creates these metric service tokens using the `mtr_` prefix and writes the file with owner-only permissions (`0600`); on first startup it prints the generated operator token once, but never prints metrics tokens. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed and prevents security-report status notices from being sent.
 
 Backup encryption uses the operator-managed `server.backup.encryption_password` key in `secrets.yml`; it is never generated automatically. Without a password, backups are unencrypted and startup logs a warning. When any compliance standard is enabled, backup creation is refused until a password is configured. Backups are written under `BACKUP_DIR` when set, otherwise to the platform backup location with a data-directory fallback. `--backup` overrides that directory. Run `zipcodes --maintenance backup [filename]` for a manual backup, `zipcodes --maintenance backup test [file]` to verify one, and `zipcodes --maintenance restore <file>` for a CLI-only restore. Restore prompts for an encrypted archive password without echoing it and applies restore size limits. A nonempty restore requires root confirmation or the service account plus the operator token. `--include-ssl` and `--include-data` add those optional content groups to a manual backup.
 
@@ -200,4 +218,4 @@ Retention is applied at startup and after backups. The daily backup scheduler de
 
 Server configuration is operator-controlled through files and command-line options. Visitor theme and language preferences are managed by the server preferences pages and consent rules in AI.md. The CLI client has a separate per-user `cli.yml` containing `server.primary` and `ui.theme` (dark by default).
 
-Rate limiting is always active; its request and window limits are configurable, but there is no `enabled` switch. Valid bearer tokens use token-specific buckets, while unauthenticated or invalid-token requests use the client IP. Repeated failed bearer authentication locks out the IP for the configured window, even if a later request uses a valid token. Sensitive token actions have a separate strict limit. Counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).
+Rate limiting is always active; its request and window limits are configurable, but there is no `enabled` switch. Valid bearer tokens use token-specific buckets, while unauthenticated or invalid-token requests use the client IP. Repeated failed bearer authentication locks out the IP for the configured window, even if a later request uses a valid token. Sensitive token actions have a separate strict limit. Counters use SQLite by default. Optional Valkey/Redis backends are selected with `server.cache.type` and either `server.cache.url` or host/port settings; credential-bearing URLs and passwords are stored in `secrets.yml`. A configured but unreachable external cache falls back to in-process sliding-window counters and reports `checks.cache: degraded` in health responses. `CACHE_URL` initializes the saved cache connection on first run only. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).

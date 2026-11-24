@@ -17,7 +17,6 @@ These tasks track verified work against `AI.md`. They remain open until the impl
 - [ ] Complete remote database support, backup rotation/incremental behavior, and secrets rotation from PARTS 10, 11, and 21.
 - [ ] Complete service installation, update, and cross-platform binary behavior from PARTS 23–25.
 - [ ] Complete TLS, Tor, I2P, and overlay lifecycle behavior from PARTS 30–31.
-- [ ] Complete optional Valkey/Redis counters with the specified in-memory degraded fallback and cache health status. The limiter now has no `enabled` switch, uses valid bearer-token buckets, enforces strict token-action defaults, and locks out IPs after repeated failed authentication; full external-cache behavior remains absent.
 
 ## Verification and documentation
 
