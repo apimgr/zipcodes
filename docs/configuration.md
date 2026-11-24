@@ -75,6 +75,12 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.notifications.email.reply_to` | empty | Optional Reply-To address |
 | `server.notifications.email.events.*` | event-specific | Per-event operator email switches; SMTP must be configured and reachable |
 | `server.contact.admin.email` | empty | Operator notification recipient; `admin@{fqdn}` is used when a configured FQDN is available |
+| `server.contact.security.email` | `security@{fqdn}` | Public security contact; falls back to the private admin recipient when explicitly empty |
+| `server.contact.abuse.email` | empty | Public abuse report recipient; delivery falls back to general, then admin |
+| `server.contact.general.email` | empty | Fallback recipient for abuse, DMCA, and privacy reports; also the DPO page's email fallback |
+| `server.contact.dpo.name` | empty | Optional name shown on the data protection contact page |
+| `server.contact.dpo.email` | empty | DPO email shown publicly; an empty value falls back to `server.contact.general.email`, never admin |
+| `server.contact.{admin,security,abuse,general}.webhooks.*` | empty | Optional per-role webhook transports; webhook values are private and are never returned by public pages or APIs |
 | `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
@@ -92,6 +98,7 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.branding.title` | `Zipcodes API` | Public application name |
 | `server.branding.tagline` | `United States ZIP code lookup` | Public application tagline |
 | `server.branding.description` | Search and geographic data description | Public application description |
+| `server.pages.help.content` | Project-specific help summary in Markdown | Appended to the server-rendered help page and returned as Markdown in its JSON API |
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
 
 The server reads `server.yml` and then merges `yaml.d/*.yml` and `yaml.d/*.yaml` in filename order. `yaml.d/branding.yml` holds `server.branding.*` settings. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. For example:
