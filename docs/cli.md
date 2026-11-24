@@ -13,20 +13,22 @@ The client stores `cli.yml` under the operating system's per-user configuration 
 | Option | Purpose |
 |---|---|
 | `--server URL` | Select an API server |
-| `--tui` | Start an interactive repeated ZIP lookup interface; enter `q` to exit |
-| `--theme dark\|light\|auto` | Select the TUI prompt theme; dark is the default and `NO_COLOR` disables color |
+| `--token TOKEN` | Validate and use an owner or operator Bearer token; save only when `auth.token` is empty or invalid |
+| `--theme dark\|light\|auto` | Select the terminal theme for this run; `NO_COLOR` disables color |
 | `--version` | Print version, commit, build time, Go version, and OS/architecture |
 | `--help` | Show usage |
 | `--shell completions [SHELL]` | Print completions for bash, zsh, fish, sh, dash, ksh, PowerShell, or pwsh |
 | `--shell init [SHELL]` | Print the shell initialization command |
 
-The command accepts exactly one ZIP argument containing five digits. For example:
+Display mode is detected automatically. With no command, an interactive terminal opens the repeated lookup interface; enter `q`, `quit`, or `exit` to leave. A command argument always selects plain CLI mode. `TERM=dumb` and headless runs do not start the interface. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`; because the default static client does not include native GUI support, `gui` uses the TUI when a terminal is available and otherwise reports `gui_unavailable`.
+
+In CLI mode, the command accepts exactly one ZIP argument containing five digits. For example:
 
 ```sh
 zipcodes-cli --server http://localhost:8080 90210
 ```
 
-To look up multiple ZIP codes in one session, run `zipcodes-cli --tui`. The selected theme is stored in `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory. A `--server` value is saved as the primary only when no primary server is already configured.
+The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. It uses `server.primary`, `auth.token`, `display.mode` (`auto` by default), and `theme.mode` (`auto` by default). Token priority is `--token`, `ZIPCODES_TOKEN`, then `auth.token`; the environment variable never saves to the file. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when `auth.token` is empty or invalid. If no server is configured in an interactive terminal, the setup prompt tests the entered URL, optionally validates a token, and saves the connection before continuing.
 
 Before a lookup, the client reads the server's autodiscovery document. If `server.update.cli_min_version` is set and the client version is older, the client refuses the lookup and prints the required version and update command.
 

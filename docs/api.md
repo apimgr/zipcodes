@@ -43,6 +43,8 @@ The matching browser pages include `/server/about`, `/server/help`, `/server/hea
 
 The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/.well-known/security.txt`, and `/.well-known/llms.txt`. The sitemap lists public HTML pages only; it does not list API endpoints. `/.well-known/pgp-key.asc` is available only when a project keypair exists and `web.security.publish_pgp_key` is enabled.
 
+`GET /api/{api_version}/server/auth/check` is a machine-only endpoint. Send an owner or operator token in `Authorization: Bearer <token>`; a valid token returns `{ "ok": true, "data": { "kind": "owner" | "operator" } }`. Missing, invalid, or expired tokens return `401`. The endpoint never returns the token and does not update owner-token activity state.
+
 `/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints.
 
 HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form and are stored in a first-party cookie.

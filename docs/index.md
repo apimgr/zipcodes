@@ -18,7 +18,7 @@ The companion CLI connects to an explicitly configured server:
 zipcodes-cli --server http://127.0.0.1:8080 90210
 ```
 
-Run `zipcodes-cli --tui` to perform repeated lookups in an interactive terminal session.
+Run `zipcodes-cli` without arguments in an interactive terminal for repeated lookups. In scripts or non-interactive shells, provide one five-digit ZIP code.
 
 ## Product data
 
