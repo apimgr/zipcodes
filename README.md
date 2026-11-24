@@ -54,6 +54,7 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 - REST API: `/api/v1/` (see [API reference](docs/api.md)).
 - OpenAPI JSON and UI: `/api/v1/server/swagger` and `/server/docs/swagger`.
 - GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
+- Remote MCP endpoint and connection guide: `/api/v1/server/mcp` and `/server/help/mcp` (owner/operator Bearer token required).
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
 - Security contact: `/.well-known/security.txt`.
 - Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.

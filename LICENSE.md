@@ -56,4 +56,4 @@ The embedded ZIP dataset is licensed separately under Creative Commons Attributi
 
 City data is provided by [DB-IP](https://db-ip.com/) under CC BY 4.0.
 
-Country and ASN data licensed CC BY 4.0 by the Number Resource Organization (NRO).
+Country and ASN records are supplied by iptoasn.com under PDDL. City records are supplied by DB-IP under CC BY 4.0.

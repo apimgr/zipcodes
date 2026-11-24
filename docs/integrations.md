@@ -1,8 +1,9 @@
 # Integrations
 
-Zipcodes exposes public read-only interfaces for browser users and API clients:
+Zipcodes exposes public read-only ZIP and GeoIP lookups, plus authenticated owner-token management and MCP connections:
 
 - REST API under `/api/v1` with an OpenAPI document at `/api/v1/server/swagger` and browser UI at `/server/docs/swagger`.
+- Remote MCP Streamable HTTP at `/api/v1/server/mcp`, with `/api/mcp` and `/mcp` aliases. It uses the existing owner/operator Bearer tokens and exposes OpenAPI operations other than token management; see [API reference](api.md#mcp).
 - Read-only GraphQL at `/api/v1/server/graphql`, with a browser interface at `/server/docs/graphql` and `/graphql`.
 - The PWA manifest at `/manifest.json` and service worker at `/sw.js`.
 - `/robots.txt` and the generated `/sitemap.xml` for public page discovery.

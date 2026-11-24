@@ -36,10 +36,10 @@ owner_token: zipcodes_owner_token_qwhzkfta
 **Non-goals:**
 - No user accounts, registration, or login of any kind
 - No admin web panel (server configured via `server.yml` only)
-- No write/mutation API (data is read-only)
+- ZIP lookup and GeoIP data are read-only; AI.md's shared token and preference management endpoints are template-owned control flows and do not mutate ZIP data
 - No non-US postal codes (US only; see `citylist` for international city data)
 - No real-time data updates (ZIP code dataset is static, updated via releases)
-- No paid tiers, no API keys, no rate-limited access tiers
+- No paid tiers, no paid API keys, no differentiated access tiers
 
 ### Roles & permissions
 
@@ -76,12 +76,12 @@ No PII stored or served. GeoIP results are computed per-request from the caller'
 | Boundary | Trust level | Notes |
 |----------|-------------|-------|
 | ZIP code SQLite database (embedded at build) | Fully trusted | Static, compiled into binary |
-| ip-location-db MMDB datasets (downloaded at first run) | Trusted — HTTPS transport; sources and attribution follow AI.md PART 19 | Used for caller GeoIP lookup only |
+| ip-location-db MMDB datasets (downloaded at first run) | Trusted — HTTPS transport plus release SHA-256 verification; city data from DB-IP (CC BY 4.0), country/ASN from iptoasn.com (PDDL) | Caller lookup and optional country-deny signal; never stored |
 | Incoming HTTP requests | **Untrusted** | ZIP code validated as 5-digit numeric string; coordinate inputs bounds-checked; radius capped |
 
 No external API calls are made on behalf of user requests.
 
-Failure mode for GeoIP: if the configured ip-location-db files are unavailable, the `/me` endpoint returns the caller's IP only without location fields. All ZIP code lookup endpoints are unaffected.
+Failure mode for GeoIP: if the configured ip-location-db files are unavailable, lookups return the IP without location fields and country filtering fails open. Private/internal addresses are never looked up or country-blocked. Country restrictions are disabled by default and, when configured, are deny-only: they do not replace authentication or authorization. All ZIP code lookup endpoints are unaffected.
 
 ### Threat model & abuse cases
 
@@ -102,8 +102,8 @@ Failure mode for GeoIP: if the configured ip-location-db files are unavailable, 
 ### Security decisions & exceptions
 
 - **No end-user accounts or login**: intentional. The operator token remains for server management features defined by AI.md.
-- **GeoIP databases downloaded at runtime**: intentional for size and freshness. DB-IP city data and NRO country/ASN attribution follow AI.md PART 19.
-- **GeoIP is informational only**: the caller's IP is a standard HTTP observable; GeoIP lookup results are not stored or logged.
+- **GeoIP databases downloaded at runtime**: intentional for size and freshness. DB-IP city data and iptoasn.com country/ASN source licenses follow AI.md PART 19.
+- **GeoIP lookup data is not retained**: configured country restrictions are a deny-only risk signal. Authentication and authorization still apply to every request that passes the country check.
 - **All responses include `Access-Control-Allow-Origin: *`**: intentional. Public data API designed for cross-origin browser use.
 
 ### API routes

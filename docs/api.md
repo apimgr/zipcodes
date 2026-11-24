@@ -35,13 +35,17 @@ GeoIP is informational. Private or reserved addresses and unavailable databases 
 
 ## Server information routes
 
-The matching browser pages are `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, and `/server/terms`. Their versioned API routes are `/api/v1/server/{about,help,healthz,privacy,terms}`.
+The matching browser pages include `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/dpo`, `/server/help/mcp`, and the preferences and token pages. Corresponding versioned API routes are listed in the OpenAPI document; MCP is a machine-only endpoint and has no paired page requirement.
 
 The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/security.txt`, and `/.well-known/security.txt`. The sitemap lists public HTML pages only; it does not list API endpoints.
 
 `/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints. `/.well-known/pgp-key.asc` returns 404 because this deployment has no security-report keypair.
 
 HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form and are stored in a first-party cookie.
+
+## MCP
+
+The remote Streamable HTTP endpoint is `/api/v1/server/mcp`; `/api/mcp` and `/mcp` are direct aliases. It accepts authenticated JSON-RPC 2.0 `POST` requests using the same owner or operator Bearer tokens as the REST API. It targets protocol revision `2026-07-28`, has no initialize handshake or session, and requires `MCP-Protocol-Version`, `Mcp-Method`, and `Accept: application/json, text/event-stream`. Tool names, descriptions, and input schemas are generated from the OpenAPI operations. Token-management operations and the MCP endpoint itself are excluded from the tool list. On a running instance, `/server/help/mcp` provides the client setup guide.
 
 ## Preferences
 
