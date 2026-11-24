@@ -81,6 +81,11 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.contact.dpo.name` | empty | Optional name shown on the data protection contact page |
 | `server.contact.dpo.email` | empty | DPO email shown publicly; an empty value falls back to `server.contact.general.email`, never admin |
 | `server.contact.{admin,security,abuse,general}.webhooks.*` | empty | Optional per-role webhook transports; webhook values are private and are never returned by public pages or APIs |
+| `server.pages.contact.enabled` | `true` | Enables `/server/contact` and the instance-report line in security.txt |
+| `server.pages.contact.captcha` | `simple` | CAPTCHA provider: self-hosted `simple`, `recaptcha`, or `hcaptcha`; external providers require site and secret keys and use the simple fallback over Tor and I2P |
+| `server.pages.contact.captcha_site_key` | empty | Public widget key for reCAPTCHA or hCaptcha |
+| `server.pages.contact.captcha_secret_key` | empty | Provider verification key; migrate it to `secrets.yml` and keep it out of responses and logs |
+| `server.pages.contact.antispam.*` | project defaults | Fill and review timing, per-IP/email/global limits, markup/link rules, block lists, strike bans, and duplicate suppression |
 | `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |

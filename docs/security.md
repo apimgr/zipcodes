@@ -24,7 +24,9 @@ When TLS is enabled, the server selects certificates from the configured certifi
 
 ## Vulnerability reporting
 
-Report a vulnerability privately through [GitHub Security Advisories](https://github.com/apimgr/zipcodes/security/advisories/new). `/.well-known/security.txt` (also `/security.txt`) currently points to the GitHub advisory form. It includes an annual expiration time, `Preferred-Languages: en`, a request-derived policy URL, and a request-derived `Canonical` URL. The `web-security.admin` setting is accepted in configuration but is not currently used by this endpoint. The project has no PGP key endpoint; `/.well-known/pgp-key.asc` returns `404`.
+Report project-source vulnerabilities privately through [GitHub Security Advisories](https://github.com/apimgr/zipcodes/security/advisories/new). A deployed instance can also accept reports through `/server/security` and the `/server/contact?security_id=...` form. Security reports are encrypted at rest with the configured AES-256-GCM key; SMTP delivery attaches the encrypted report, and an acknowledgment contains the tracking ID and a status URL. When a researcher submits an armored OpenPGP public key or an HTTPS key URL, the acknowledgment is encrypted to that key. Without working SMTP, the report is still stored but no notification or acknowledgment is sent. The status URL exposes triage state only, not report content.
+
+`/.well-known/security.txt` is the sole security.txt route. It includes the GitHub advisory URL, a rotating instance-report URL when contact reporting is enabled, a configured security contact when available, an annual expiration time, `Preferred-Languages: en`, and request-derived policy and `Canonical` URLs. `/.well-known/pgp-key.asc` returns `404`; project-level keypair management and encrypted-at-rest PGP reports are not implemented yet.
 
 ## Public and discovery endpoints
 

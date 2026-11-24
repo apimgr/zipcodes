@@ -37,7 +37,7 @@ GeoIP lookups return IP-only results when data is unavailable. Private/internal 
 
 The matching browser pages include `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/dpo`, `/server/help/mcp`, and the preferences and token pages. Corresponding versioned API routes are listed in the OpenAPI document; MCP is a machine-only endpoint and has no paired page requirement.
 
-The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/security.txt`, and `/.well-known/security.txt`. The sitemap lists public HTML pages only; it does not list API endpoints.
+The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, and `/.well-known/security.txt`. The sitemap lists public HTML pages only; it does not list API endpoints.
 
 `/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints. `/.well-known/pgp-key.asc` returns 404 because this deployment has no security-report keypair.
 
@@ -46,6 +46,10 @@ HTML pages support server-rendered search and require no JavaScript. Theme chang
 ## MCP
 
 The remote Streamable HTTP endpoint is `/api/{api_version}/server/mcp`; `/api/mcp` and `/mcp` are direct aliases. It accepts authenticated JSON-RPC 2.0 `POST` requests using the same owner or operator Bearer tokens as the REST API. It targets protocol revision `2026-07-28`, has no initialize handshake or session, and requires `MCP-Protocol-Version`, `Mcp-Method`, and `Accept: application/json, text/event-stream`. Tool names, descriptions, and input schemas are generated from the OpenAPI operations. Token-management operations and the MCP endpoint itself are excluded from the tool list. On a running instance, `/server/help/mcp` provides the client setup guide.
+
+## Contact and security reporting
+
+`GET /api/{api_version}/server/contact` describes the available report types, form fields, fill token, and CAPTCHA challenge. `POST` uses a submit, review, and confirm flow; it does not deliver on the first request. Abuse, DMCA, and privacy submissions require SMTP. Security reports use a rotating `security_id`, are encrypted with the server AES-256-GCM key before database storage, and still succeed when SMTP is unavailable. The response returns a `tracking_id`; the status URL requires a separate one-use-per-day token sent only in the acknowledgment email. `/.well-known/security.txt` is the only security.txt route.
 
 ## Preferences
 

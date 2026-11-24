@@ -10,7 +10,7 @@ Zipcodes exposes public read-only ZIP and GeoIP lookups, plus authenticated owne
 - Empty Atom (`/feed.xml`) and RSS (`/rss.xml`) feeds because ZIP records have no public per-record page or publication timestamp.
 - `/.well-known/llms.txt` with request-derived absolute links to the API and its documentation.
 - A companion `zipcodes-cli` that connects to an operator-selected server.
-- `/security.txt` and `/.well-known/security.txt` for vulnerability reporting information.
+- `/.well-known/security.txt` for vulnerability reporting information.
 
 API clients can optionally use anonymous owner credentials to associate activity with an owner. A primary owner token manages linked tokens; linked tokens are for automation and cannot manage tokens. This is credential-based identity only: there are no user accounts, login sessions, or federated identity flows. See [API reference](api.md) and [Security](security.md) for token routes and handling.
 
