@@ -51,16 +51,17 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 
 ## API and pages
 
-- REST API: `/api/v1/` (see [API reference](docs/api.md)).
+- REST API: `/api/{api_version}/` (default `v1`, discoverable through `/api/autodiscover`; see [API reference](docs/api.md)).
 - OpenAPI JSON and UI: `/api/v1/server/swagger` and `/server/docs/swagger`.
 - GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
 - Remote MCP endpoint and connection guide: `/api/v1/server/mcp` and `/server/help/mcp` (owner/operator Bearer token required).
+- Internal monitoring endpoints: Prometheus at `/server/metrics`, Grafana dashboard JSON at `/server/metrics/grafana`, and recent Loki-compatible HTTP logs at `/server/metrics/loki`; each uses its own generated service token from `secrets.yml`.
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
 - Security contact: `/.well-known/security.txt`.
 - Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.
 - Empty Atom and RSS feeds: `/feed.xml` and `/rss.xml` (ZIP records have no per-record permalink or publication timestamp).
 
-All lookup endpoints are public and read-only. GeoIP is informational and does not affect ZIP lookups.
+All ZIP lookup endpoints are public and read-only. GeoIP lookup is informational for callers; the optional operator-configured country deny/allow rules can reject requests after rate limiting, while always failing open when country data is unavailable. ZIP dataset reads are unchanged.
 
 ## Documentation
 

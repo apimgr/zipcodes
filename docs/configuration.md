@@ -23,11 +23,11 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.compression.level` | `5` | Compression level from 1 to 9 |
 | `server.compression.types` | HTML, CSS, JavaScript, JSON, XML | MIME types eligible for compression |
 | `server.geoip.enabled` | `true` | Downloads and opens GeoIP databases |
-| `server.geoip.dir` | `security/geoip` | GeoIP database directory relative to data directory |
-| `server.geoip.update_interval` | `weekly` | GeoIP database refresh interval |
-| `server.geoip.city` | `true` | Download IPv4 and IPv6 city databases |
-| `server.geoip.country` | `true` | Download the country-code database |
-| `server.geoip.asn` | `true` | Download ASN organization data |
+| `server.api_version` | `v1` | Version prefix used by the canonical API routes |
+| `server.geoip.deny_countries` | `[]` | Deny requests from these ISO 3166-1 alpha-2 countries |
+| `server.geoip.allow_countries` | `[]` | When nonempty, allow only these ISO country codes; takes precedence over `deny_countries` |
+| `server.geoip.presets` | `{}` | Operator-authored named ISO country lists; presets are never applied automatically |
+| `server.security.allowlist` | `[]` | Trusted IP/CIDR entries that bypass GeoIP country restrictions |
 | `server.trusted_proxies.additional` | `[]` | Additional proxy IPs/CIDRs whose forwarding headers are trusted |
 | `server.rate_limit.enabled` | `true` | Enables request abuse limits |
 | `server.rate_limit.read.requests` | `120` | Read requests per IP per window |
@@ -37,10 +37,15 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.rate_limit.health.requests` | `120` | Health requests per IP per window |
 | `server.rate_limit.health.window` | `60` | Health window in seconds |
 | `server.rate_limit.global_burst` | `240` | Global per-IP ceiling per minute |
-| `server.metrics.enabled` | `false` | Reserved setting; metrics collection is not currently implemented |
-| `server.metrics.endpoint` | `/metrics` | Reserved setting; no metrics endpoint is currently served |
-| `server.metrics.include_system` | `true` | Reserved setting; currently has no effect |
-| `server.metrics.include_app` | `true` | Reserved setting; currently has no effect |
+| `server.metrics.enabled` | `true` | Enables the internal Prometheus, Grafana, and Loki endpoints |
+| `server.metrics.root.enabled` | `true` | Enables root aliases at `/metrics` and `/metrics/{service}` |
+| `server.metrics.auth.allow_unauthenticated` | `false` | Disables service-token checks for firewalled metrics deployments only |
+| `server.metrics.include_system` | `true` | Includes host CPU, memory, and disk metrics |
+| `server.metrics.include_runtime` | `true` | Includes Go runtime gauges and GC counters |
+| `server.metrics.loki.max_entries` | `1000` | Maximum recent structured HTTP log entries returned by Loki endpoint |
+| `server.metrics.loki.max_age` | `1h` | Maximum age of entries returned by the Loki endpoint |
+| `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
+| `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
 | `server.logging.access_format` | `apache` | Reserved setting; currently has no effect |
 | `server.logging.level` | `info` | Reserved setting; currently has no effect |
 | `web-security.cors` | `*` | CORS origin for this public API |
@@ -52,15 +57,32 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `web-robots.allow` | `/`, `/api` | Paths listed as allowed in `robots.txt` |
 | `web-robots.deny` | `/debug` | Paths listed as disallowed in `robots.txt` |
 | `web-security.admin` | empty | Reserved setting; the current `security.txt` always points to GitHub Security Advisories |
-| `branding.title` | `Zipcodes API` | Public application name |
-| `branding.tagline` | `United States ZIP code lookup` | Public application tagline |
-| `branding.description` | Search and geographic data description | Public application description |
+| `server.branding.title` | `Zipcodes API` | Public application name |
+| `server.branding.tagline` | `United States ZIP code lookup` | Public application tagline |
+| `server.branding.description` | Search and geographic data description | Public application description |
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
 
-The server reads `server.yml` in its configuration directory. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, and `PORT` and `ADDRESS` override listener settings. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
+The server reads `server.yml` and then merges `yaml.d/*.yml` and `yaml.d/*.yaml` in filename order. `yaml.d/branding.yml` holds `server.branding.*` settings. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. For example:
 
-Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token) and `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values). The server creates this file with owner-only permissions (`0600`); on first startup it prints the generated operator token once. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed.
+While running, the configuration manager checks `server.yml`, `yaml.d/`, `secrets.yml`, and `assets/` every five seconds. A valid change reloads the merged configuration. A malformed file keeps its last successfully parsed contents; malformed first-time files are ignored. Changes to `server.port`, `server.address`, `server.daemonize`, or the SSL, database, and Tor settings are reported as requiring a restart. Check `/server/healthz` or run `zipcodes --status` to see pending restart state and the affected settings.
+
+```yaml
+server:
+  branding:
+    title: Zipcodes API
+    content:
+      header:
+        format: html
+        body: '<span>Community service</span>'
+      footer:
+        format: html
+        body: '<p>Operated by the community.</p>'
+```
+
+Header and footer content accepts sanitized HTML. The about, privacy, and terms entries accept `html`, `md`, or `txt`; each body may be a single string or a language map with a `default` fallback. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, and `PORT` and `ADDRESS` override listener settings. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
+
+Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token), `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values), and separate `server.metrics.auth.tokens.prometheus`, `.grafana`, and `.loki` credentials. The server creates these metric service tokens using the `mtr_` prefix and writes the file with owner-only permissions (`0600`); on first startup it prints the generated operator token once, but never prints metrics tokens. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed.
 
 Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate `cli.yml` containing `server.primary`.
 
-Rate limit counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: a failed download is logged and does not prevent ZIP lookups. See [Security](security.md).
+Rate limit counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).

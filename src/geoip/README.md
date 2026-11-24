@@ -2,7 +2,7 @@
 
 The server downloads local MMDB files from `sapics/ip-location-db` on first run. City records come from DB-IP under CC BY 4.0. Country and ASN records come from iptoasn.com under PDDL. The downloader verifies each file against its upstream SHA-256 checksum before replacing a live database.
 
-The default directory is `{data_dir}/security/geoip`. Set `server.geoip.dir` to change it. Set `server.geoip.enabled: false` to disable downloads and lookups; the `asn`, `country`, and `city` flags independently select database categories.
+The fixed directory is `{data_dir}/security/geoip`. Set `server.geoip.enabled: false` to disable downloads, updates, lookups, and country restrictions. The application always manages the ASN, Country, City IPv4, and City IPv6 datasets together, with a weekly update schedule.
 
 The lookup is local and makes no request to a third-party API. It returns only fields available in the selected data files. Private, loopback, unspecified, and link-local addresses are not looked up. Missing databases do not block other application requests.
 

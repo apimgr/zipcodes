@@ -1,24 +1,24 @@
 # API reference
 
-ZIP lookup routes are public and read-only. The REST API base path is `/api/v1`. Separate preference and owner-token routes manage visitor settings and anonymous owner credentials; their access requirements are described below. Interactive OpenAPI documentation is served at `/server/docs/swagger`; the OpenAPI JSON is `/api/v1/server/swagger` (also `/api/swagger`). The GraphQL interface is `/server/docs/graphql`; submit GraphQL queries to `/api/v1/server/graphql` or `/api/graphql` with GET or POST. The `/graphql` browser path is also available.
+ZIP lookup routes are public and read-only. The default REST API base path is `/api/{api_version}` (default `/api/v1`); operators can configure `server.api_version`, and clients discover the active version from `/api/autodiscover`. Separate preference and owner-token routes manage visitor settings and anonymous owner credentials; their access requirements are described below. Interactive OpenAPI documentation is served at `/server/docs/swagger`; the OpenAPI JSON is `/api/{api_version}/server/swagger` (also `/api/swagger`). The GraphQL interface is `/server/docs/graphql`; submit queries to `/api/{api_version}/server/graphql` or `/api/graphql`. The old root `/graphql` path is not served.
 
 ## ZIP code routes
 
 | Method | Route | Purpose |
 |---|---|---|
-| GET | `/api/v1/zipcodes/{code}` | Look up one five-digit ZIP code |
-| GET | `/api/v1/zipcodes/{code}.txt` | Plain text ZIP lookup |
-| GET | `/api/v1/zipcodes/search?q={query}` | Search ZIP, city, state, or city/state |
-| GET | `/api/v1/zipcodes/autocomplete?q={query}` | Return suggestions |
-| GET | `/api/v1/zipcodes/city/{city}` | List ZIP codes for a city |
-| GET | `/api/v1/zipcodes/state/{state}` | List ZIP codes for a state abbreviation |
-| GET | `/api/v1/zipcodes/nearby?zip={zip}&radius={miles}` | Search around an origin ZIP |
-| GET | `/api/v1/zipcodes/nearby?lat={lat}&lng={lng}&radius={miles}` | Search around coordinates |
-| GET | `/api/v1/zipcodes/stats` | Return dataset counts |
-| GET | `/api/v1/zipcodes/stats.txt` | Return dataset counts as text |
-| GET | `/api/v1/zipcodes/random` | Return a random ZIP record |
-| GET | `/api/v1/zipcodes/random.txt` | Return a random record as text |
-| GET | `/api/v1/zipcodes.json` | Download the full embedded dataset |
+| GET | `/api/{api_version}/zipcodes/{code}` | Look up one five-digit ZIP code |
+| GET | `/api/{api_version}/zipcodes/{code}.txt` | Plain text ZIP lookup |
+| GET | `/api/{api_version}/zipcodes/search?q={query}` | Search ZIP, city, state, or city/state |
+| GET | `/api/{api_version}/zipcodes/autocomplete?q={query}` | Return suggestions |
+| GET | `/api/{api_version}/zipcodes/city/{city}` | List ZIP codes for a city |
+| GET | `/api/{api_version}/zipcodes/state/{state}` | List ZIP codes for a state abbreviation |
+| GET | `/api/{api_version}/zipcodes/nearby?zip={zip}&radius={miles}` | Search around an origin ZIP |
+| GET | `/api/{api_version}/zipcodes/nearby?lat={lat}&lng={lng}&radius={miles}` | Search around coordinates |
+| GET | `/api/{api_version}/zipcodes/stats` | Return dataset counts |
+| GET | `/api/{api_version}/zipcodes/stats.txt` | Return dataset counts as text |
+| GET | `/api/{api_version}/zipcodes/random` | Return a random ZIP record |
+| GET | `/api/{api_version}/zipcodes/random.txt` | Return a random record as text |
+| GET | `/api/{api_version}/zipcodes.json` | Download the full embedded dataset |
 
 Radius must be greater than zero and may not exceed the server's configured maximum (100 miles by default). Coordinate inputs are bounded to latitude -90..90 and longitude -180..180. ZIP codes must contain exactly five digits.
 
@@ -26,12 +26,12 @@ Radius must be greater than zero and may not exceed the server's configured maxi
 
 | Method | Route | Purpose |
 |---|---|---|
-| GET | `/api/v1/me` | Return the caller IP and available location data |
-| GET | `/api/v1/geoip?ip={address}` | Look up an IP address |
-| GET | `/api/v1/geoip.txt?ip={address}` | Text form of an IP lookup |
-| POST | `/api/v1/geoip/batch` | Look up a bounded batch of IP addresses |
+| GET | `/api/{api_version}/me` | Return the caller IP and available location data |
+| GET | `/api/{api_version}/geoip?ip={address}` | Look up an IP address |
+| GET | `/api/{api_version}/geoip.txt?ip={address}` | Text form of an IP lookup |
+| POST | `/api/{api_version}/geoip/batch` | Look up a bounded batch of IP addresses |
 
-GeoIP is informational. Private or reserved addresses and unavailable databases may produce IP-only results. ZIP lookups do not depend on GeoIP availability.
+GeoIP lookups return IP-only results when data is unavailable. Private/internal addresses are never looked up or country-blocked. Optional country restrictions are disabled by default and act only as a deny-only risk signal; ZIP lookup data is unaffected.
 
 ## Server information routes
 
@@ -45,13 +45,13 @@ HTML pages support server-rendered search and require no JavaScript. Theme chang
 
 ## MCP
 
-The remote Streamable HTTP endpoint is `/api/v1/server/mcp`; `/api/mcp` and `/mcp` are direct aliases. It accepts authenticated JSON-RPC 2.0 `POST` requests using the same owner or operator Bearer tokens as the REST API. It targets protocol revision `2026-07-28`, has no initialize handshake or session, and requires `MCP-Protocol-Version`, `Mcp-Method`, and `Accept: application/json, text/event-stream`. Tool names, descriptions, and input schemas are generated from the OpenAPI operations. Token-management operations and the MCP endpoint itself are excluded from the tool list. On a running instance, `/server/help/mcp` provides the client setup guide.
+The remote Streamable HTTP endpoint is `/api/{api_version}/server/mcp`; `/api/mcp` and `/mcp` are direct aliases. It accepts authenticated JSON-RPC 2.0 `POST` requests using the same owner or operator Bearer tokens as the REST API. It targets protocol revision `2026-07-28`, has no initialize handshake or session, and requires `MCP-Protocol-Version`, `Mcp-Method`, and `Accept: application/json, text/event-stream`. Tool names, descriptions, and input schemas are generated from the OpenAPI operations. Token-management operations and the MCP endpoint itself are excluded from the tool list. On a running instance, `/server/help/mcp` provides the client setup guide.
 
 ## Preferences
 
-The browser preferences page is `/server/preferences`; its form currently saves the `theme` value (`dark`, `light`, or `auto`). The page displays the detected language but language changes are not implemented yet. `GET /api/v1/server/preferences` returns the current `theme`, `lang`, and `prefs` values. `POST /api/v1/server/preferences` accepts JSON or form values and applies valid theme changes; unsupported values, including `lang`, are returned in `ignored`.
+The browser preferences page is `/server/preferences`; its form currently saves the `theme` value (`dark`, `light`, or `auto`). The page displays the detected language but language changes are not implemented yet. `GET /api/{api_version}/server/preferences` returns the current `theme`, `lang`, and `prefs` values. `POST /api/{api_version}/server/preferences` accepts JSON or form values and applies valid theme changes; unsupported values, including `lang`, are returned in `ignored`.
 
-Preference export/import is available at `/server/preferences/sync` and `/server/preferences/sync/import`. The sync page exports theme and language values as a URL and a base64url code. Import currently applies theme only; language is included in the data but is ignored. The API equivalents are `GET /api/v1/server/preferences/sync` and `GET /api/v1/server/preferences/sync/import`.
+Preference export/import is available at `/server/preferences/sync` and `/server/preferences/sync/import`. The sync page exports theme and language values as a URL and a base64url code. Import currently applies theme only; language is included in the data but is ignored. The API equivalents are `GET /api/{api_version}/server/preferences/sync` and `GET /api/{api_version}/server/preferences/sync/import`.
 
 ## Owner tokens
 
@@ -73,17 +73,17 @@ The server-rendered token page supports these form actions:
 | Method | Route | Access | Purpose |
 |---|---|---|---|
 | GET | `/server/preferences/tokens` | Owner cookie for management; otherwise shows create/restore forms | Token management page |
-| POST | `/api/v1/server/preferences/tokens/primary` | No token required | Create an owner and issue its primary token; returns `201`, or `409` if a valid token is already supplied |
-| GET | `/api/v1/server/preferences/tokens` | Primary owner Bearer token | List tokens with values masked/omitted |
-| POST | `/api/v1/server/preferences/tokens/primary/reveal` | Primary owner Bearer token | Reveal the primary token |
-| POST | `/api/v1/server/preferences/tokens/primary/rotate` | Primary owner Bearer token; JSON `confirm` must match its last four characters | Replace the primary token |
-| DELETE | `/api/v1/server/preferences/tokens/primary` | Primary owner Bearer token; JSON `confirm` must match its last four characters | Delete the owner and all its tokens/resources |
-| POST | `/api/v1/server/preferences/tokens` | Primary owner Bearer token; JSON `name` and optional `expiry` | Create a linked token |
-| POST | `/api/v1/server/preferences/tokens/{id}/reveal` | Primary owner Bearer token | Reveal a linked token |
-| POST | `/api/v1/server/preferences/tokens/{id}/rotate` | Primary owner Bearer token; JSON `confirm` must match the token's last four characters | Replace a linked token |
-| POST | `/api/v1/server/preferences/tokens/{id}/update` | Primary owner Bearer token; JSON `name` and `expiry` | Rename a linked token or change its expiry |
-| DELETE | `/api/v1/server/preferences/tokens/{id}` | Primary owner Bearer token | Revoke a linked token |
+| POST | `/api/{api_version}/server/preferences/tokens/primary` | No token required | Create an owner and issue its primary token; returns `201`, or `409` if a valid token is already supplied |
+| GET | `/api/{api_version}/server/preferences/tokens` | Primary owner Bearer token | List tokens with values masked/omitted |
+| POST | `/api/{api_version}/server/preferences/tokens/primary/reveal` | Primary owner Bearer token | Reveal the primary token |
+| POST | `/api/{api_version}/server/preferences/tokens/primary/rotate` | Primary owner Bearer token; JSON `confirm` must match its last four characters | Replace the primary token |
+| DELETE | `/api/{api_version}/server/preferences/tokens/primary` | Primary owner Bearer token; JSON `confirm` must match its last four characters | Delete the owner and all its tokens/resources |
+| POST | `/api/{api_version}/server/preferences/tokens` | Primary owner Bearer token; JSON `name` and optional `expiry` | Create a linked token |
+| POST | `/api/{api_version}/server/preferences/tokens/{id}/reveal` | Primary owner Bearer token | Reveal a linked token |
+| POST | `/api/{api_version}/server/preferences/tokens/{id}/rotate` | Primary owner Bearer token; JSON `confirm` must match the token's last four characters | Replace a linked token |
+| POST | `/api/{api_version}/server/preferences/tokens/{id}/update` | Primary owner Bearer token; JSON `name` and `expiry` | Rename a linked token or change its expiry |
+| DELETE | `/api/{api_version}/server/preferences/tokens/{id}` | Primary owner Bearer token | Revoke a linked token |
 
 Linked-token expiry accepts `never`, `7d`, `30d`, `90d`, `1y`, or a future `YYYY-MM-DD` date. The default limit is 25 active linked tokens per owner. Raw token values are returned only by issue, reveal, and rotate actions; save them securely. The primary token may be restored in a browser from `/server/preferences/tokens`. Revoking the primary deletes the owner and its associated data; rotating it preserves the owner and linked tokens.
 
-`/server/healthz` is the canonical health frontend: browsers receive HTML, HTTP tools receive human-readable text, and `Accept: application/json` receives JSON. `/api/v1/server/healthz` and `/api/healthz` are machine endpoints; they return JSON by default and support text with `.txt` or `Accept: text/plain`. The root `/healthz` alias is disabled by default and can be enabled with `server.healthz.root.enabled: true`; it uses the same content negotiation as `/server/healthz`. Health responses are bare and are not wrapped in the standard API envelope. The OpenAPI and GraphQL endpoints are described above. Other JSON API responses use `ok` and `data` on success; errors use `ok`, `error`, `message`, and `details`.
+`/server/healthz` is the canonical health frontend: browsers receive HTML, HTTP tools receive human-readable text, and `Accept: application/json` receives JSON. `/api/{api_version}/server/healthz` and `/api/healthz` are machine endpoints; they return JSON by default and support text with `.txt` or `Accept: text/plain`. The root `/healthz` alias is disabled by default and can be enabled with `server.healthz.root.enabled: true`; it uses the same content negotiation as `/server/healthz`. Health responses are bare and are not wrapped in the standard API envelope. Health checks are cached for at most 60 seconds. A live configuration change that requires a restart adds `pending_restart` and `restart_reason` to health output and changes the status to `restart_required` while the service remains available. Request totals are persisted in batches of at most 60 seconds, requests are grouped into rolling hourly buckets, and health and metrics scrapes are excluded from request totals. GeoIP checks report enabled datasets individually; unavailable non-critical collectors make the overall status `degraded`. The OpenAPI and GraphQL endpoints are described above. Other JSON API responses use `ok` and `data` on success; errors use `ok`, `error`, `message`, and `details`.

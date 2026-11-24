@@ -26,7 +26,7 @@ owner_token: zipcodes_owner_token_qwhzkfta
 - City name search (optional state filter)
 - State-level listing by abbreviation
 - Radius-based geographic query: all ZIP codes within N miles of a given ZIP code or coordinate
-- Caller GeoIP lookup (country, city, approximate coordinates) via the CC BY 4.0 ip-location-db datasets
+- Caller GeoIP lookup (country, city, approximate coordinates) via ip-location-db datasets (DB-IP city under CC BY 4.0; iptoasn country and ASN under PDDL)
 - Full web frontend (server-side Go templates, dark/light/auto theme, PWA, mobile-first)
 - Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`
 - CLI client (`zipcodes-cli`) for terminal lookup: `zipcodes-cli 90210`
@@ -81,7 +81,7 @@ No PII stored or served. GeoIP results are computed per-request from the caller'
 
 No external API calls are made on behalf of user requests.
 
-Failure mode for GeoIP: if the configured ip-location-db files are unavailable, lookups return the IP without location fields and country filtering fails open. Private/internal addresses are never looked up or country-blocked. Country restrictions are disabled by default and, when configured, are deny-only: they do not replace authentication or authorization. All ZIP code lookup endpoints are unaffected.
+Failure mode for GeoIP: if the managed ip-location-db files are unavailable, lookups return the IP without location fields and country filtering fails open. Private/internal addresses are never looked up or country-blocked. Country restrictions are disabled by default and, when configured, they run after rate limiting and before authentication as a deny-only signal; they do not replace authentication or authorization. All ZIP code lookup endpoints remain read-only.
 
 ### Threat model & abuse cases
 
@@ -108,19 +108,19 @@ Failure mode for GeoIP: if the configured ip-location-db files are unavailable, 
 
 ### API routes
 
-Project-defined lookup routes use `/api/v1`; they are public and read-only, with rate limits defined by AI.md. Template-owned server routes are specified by AI.md and are not repeated in this inventory.
+Project-defined lookup routes use `/api/{api_version}` (default `v1`, reported by `/api/autodiscover`); they are public and read-only, with rate limits defined by AI.md. Template-owned server routes are specified by AI.md and are not repeated in this inventory.
 
-- GET `/api/v1/zipcodes/{code}`: exact ZIP lookup; a five-digit code returns one ZIP record or a not-found response.
-- GET `/api/v1/zipcodes/search?q={query}`: search ZIP, city, state, or city/state; returns paginated matching records.
-- GET `/api/v1/zipcodes/autocomplete?q={query}`: return ZIP/city/state suggestions.
-- GET `/api/v1/zipcodes/nearby?zip={zip}&radius={miles}` or `?lat={lat}&lng={lng}&radius={miles}`: return nearby ZIP records and distances within the configured radius cap.
-- GET `/api/v1/zipcodes/city/{city}`: return paginated ZIP records for a city.
-- GET `/api/v1/zipcodes/state/{state}`: return paginated ZIP records for a state abbreviation.
-- GET `/api/v1/zipcodes/stats`: return dataset counts.
-- GET `/api/v1/zipcodes/random`: return one random ZIP record.
-- GET `/api/v1/zipcodes.json`: return the embedded ZIP dataset.
-- GET `/api/v1/zipcodes/{code}.txt`, `/api/v1/zipcodes/stats.txt`, `/api/v1/zipcodes/random.txt`: text representations of the corresponding lookup, statistics, and random record.
-- GET `/api/v1/me`: return caller IP and available GeoIP fields; location fields may be absent when GeoIP data is unavailable.
-- GET `/api/v1/geoip?ip={address}` and GET `/api/v1/geoip.txt?ip={address}`: return GeoIP lookup data in JSON or text.
-- POST `/api/v1/geoip/batch`: resolve a bounded batch of IP addresses and return their GeoIP results.
-Browser pages currently registered by the application: `/` and `/search` provide ZIP search; `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, `/server/docs/graphql`, and `/graphql` provide public information, status, or API interfaces. AI.md additionally requires its shared server-page registry and template-owned pages, which remain part of implementation scope.
+- GET `/api/{api_version}/zipcodes/{code}`: exact ZIP lookup; a five-digit code returns one ZIP record or a not-found response.
+- GET `/api/{api_version}/zipcodes/search?q={query}`: search ZIP, city, state, or city/state; returns paginated matching records.
+- GET `/api/{api_version}/zipcodes/autocomplete?q={query}`: return ZIP/city/state suggestions.
+- GET `/api/{api_version}/zipcodes/nearby?zip={zip}&radius={miles}` or `?lat={lat}&lng={lng}&radius={miles}`: return nearby ZIP records and distances within the configured radius cap.
+- GET `/api/{api_version}/zipcodes/city/{city}`: return paginated ZIP records for a city.
+- GET `/api/{api_version}/zipcodes/state/{state}`: return paginated ZIP records for a state abbreviation.
+- GET `/api/{api_version}/zipcodes/stats`: return dataset counts.
+- GET `/api/{api_version}/zipcodes/random`: return one random ZIP record.
+- GET `/api/{api_version}/zipcodes.json`: return the embedded ZIP dataset.
+- GET `/api/{api_version}/zipcodes/{code}.txt`, `/api/{api_version}/zipcodes/stats.txt`, `/api/{api_version}/zipcodes/random.txt`: text representations of the corresponding lookup, statistics, and random record.
+- GET `/api/{api_version}/me`: return caller IP and available GeoIP fields; location fields may be absent when GeoIP data is unavailable.
+- GET `/api/{api_version}/geoip?ip={address}` and GET `/api/{api_version}/geoip.txt?ip={address}`: return GeoIP lookup data in JSON or text.
+- POST `/api/{api_version}/geoip/batch`: resolve a bounded batch of IP addresses and return their GeoIP results.
+Browser pages currently registered by the application: `/` and `/search` provide ZIP search; `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, and `/server/docs/graphql` provide public information, status, or API interfaces. AI.md additionally requires its shared server-page registry and template-owned pages, which remain part of implementation scope.
