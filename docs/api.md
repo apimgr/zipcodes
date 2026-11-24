@@ -2,6 +2,10 @@
 
 ZIP lookup routes are public and read-only. The default REST API base path is `/api/{api_version}` (default `/api/v1`); operators can configure `server.api_version`, and clients discover the active version from `/api/autodiscover`. Separate preference and owner-token routes manage visitor settings and anonymous owner credentials; their access requirements are described below. Interactive OpenAPI documentation is served at `/server/docs/swagger`; the OpenAPI JSON is `/api/{api_version}/server/swagger` (also `/api/swagger`). The GraphQL interface is `/server/docs/graphql`; submit queries to `/api/{api_version}/server/graphql` or `/api/graphql`. The old root `/graphql` path is not served.
 
+## Autodiscovery
+
+`GET /api/autodiscover` returns the active API version, project name and version, public origin URLs, and the minimum supported CLI version. It adds `data.onion` or `data.i2p` only when the corresponding overlay is healthy and its `server.tor.expose` or `server.i2p.expose` setting is `true`; both settings default to `false`.
+
 ## ZIP code routes
 
 | Method | Route | Purpose |

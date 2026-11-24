@@ -14,7 +14,25 @@ Zipcodes exposes public read-only ZIP and GeoIP lookups, plus authenticated owne
 
 API clients can optionally use anonymous owner credentials to associate activity with an owner. A primary owner token manages linked tokens; linked tokens are for automation and cannot manage tokens. This is credential-based identity only: there are no user accounts, login sessions, or federated identity flows. See [API reference](api.md) and [Security](security.md) for token routes and handling.
 
-The project does not provide webhooks, identity federation, user accounts, or a hosted API address. The CLI server URL is supplied with `--server`, `ZIPCODES_SERVER_PRIMARY`, or `server.primary` in its `cli.yml`.
+The project does not provide identity federation, user accounts, or a hosted API address. The CLI server URL is supplied with `--server`, `ZIPCODES_SERVER_PRIMARY`, or `server.primary` in its `cli.yml`.
+
+## I2P eepsite
+
+`server.i2p.enabled` controls the optional I2P eepsite. It defaults on in containers and off elsewhere; an explicit `--i2p` or `--i2p=false` takes precedence over `I2P_ENABLED`, which takes precedence over `server.yml`. When enabled, the server prefers a dedicated i2pd process and otherwise uses a reachable SAMv3 bridge. The destination key is stored under `{data_dir}/i2p/site/site-keys.dat` with private permissions, and the `.b32.i2p` address remains stable across restarts. I2P forwarding uses a separate loopback backend listener and does not add a PROXY header. Runtime state is exposed by the server health response; see [configuration](configuration.md#configuration) for the settings and limits.
+
+## Tor hidden service
+
+When a Tor executable is available, the server starts its own Tor process with app-scoped configuration and data directories. The generated v3 hidden service forwards to a dedicated loopback backend that requires Tor's PROXY protocol header; it does not share the public listener. Outbound SOCKS access is disabled by default; when enabled it binds to loopback and explicitly accepts only loopback clients. Tor is configured as a client and hidden service, never as a relay or exit node. Bootstrap runs separately from the clearnet listeners, and Tor startup failures leave the public server available. The server checks the Tor control endpoint every 30 seconds and restarts the managed process if the check fails. Set `server.tor.expose: true` to include a healthy `.onion` address in `/api/autodiscover`; Tor and I2P addresses are omitted by default. See [configuration](configuration.md#configuration) for the Tor options and limits.
+
+Tor requests use onion URLs and UTC timestamps, suppress clearnet email addresses and project-host links, and identify clients with Tor's opaque circuit token (`tor:{id}`) rather than logging the local daemon address. The fallback identity is `tor`. If `server.tor.contact_email` is set, it is the only email shown on onion responses. Clearnet HTML document responses advertise the matching onion URL with `Onion-Location`; JSON, assets, redirects, and onion responses do not receive that header.
+
+## Contact webhooks
+
+Contact roles can deliver notifications through `server.contact.{admin,security,abuse,general}.webhooks`. Supported names are `telegram`, `discord`, `slack`, `mattermost`, `pushover`, `gotify`, and `generic`. Each configured HTTPS destination receives the adapter-specific request format described in [configuration](configuration.md), plus an HMAC-SHA256 signature, Unix timestamp, UUIDv7 delivery ID, event name, and application User-Agent. Signing secrets are generated per role and transport in `secrets.yml`; they are not exposed in public pages, APIs, or logs.
+
+Security-role webhook bodies contain the already encrypted report. Abuse, DMCA, and privacy submissions use their resolved role destinations and include submitted report content, so configure those endpoints as private destinations. Admin notifications contain summaries and must not include user-submitted content.
+
+Webhook delivery runs asynchronously. Failed sends retry after 1 minute, 5 minutes, 15 minutes, 1 hour, 6 hours, and 24 hours, reusing the same delivery ID; after the final failure, the server logs `notify.webhook_failed` without printing the endpoint URL or signing secret.
 
 GeoIP database downloads are an optional feature used for caller/IP lookup. The server fetches the fixed ip-location-db assets over HTTPS into `{data_dir}/security/geoip` and verifies release SHA-256 checksums before replacement; an unavailable dataset leaves ZIP lookup functionality available and country restrictions fail open.
 

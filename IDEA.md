@@ -1,6 +1,6 @@
 ## Project description
 
-Zipcodes is a Go web application providing US ZIP-code lookups and geographic queries through a versioned REST API, GraphQL endpoint, and server-rendered search UI. The checked-in source currently contains 33,100 geographic ZIP records with city, state, county, coordinates, and timezone. Its source does not provide telephone area-code assignments, so `area_codes` is empty. Optional GeoIP lookup resolves the caller's approximate location. ZIP records are loaded into SQLite at runtime. A companion CLI enables lookups from the terminal.
+Zipcodes is a Go web application providing US ZIP-code lookups and geographic queries through a versioned REST API, GraphQL endpoint, and server-rendered search UI. The checked-in source currently contains 33,100 geographic ZIP records with city, state, county, coordinates, and timezone. Its source does not provide telephone area-code assignments, so `area_codes` is empty. Optional GeoIP lookup resolves the caller's approximate location. ZIP records are loaded from the embedded dataset into SQLite by default; an operator may configure the supported remote libSQL/Turso backend. A companion CLI enables lookups from the terminal.
 
 ## Project variables
 
@@ -55,7 +55,7 @@ AI.md also defines anonymous owner/linked API tokens and shared server pages. Th
 
 ### Data model & sensitivity
 
-**ZIP code record** (stored in embedded SQLite, no PII):
+**ZIP code record** (stored in local SQLite by default, or remote libSQL/Turso when configured; no PII):
 
 | Field | Type | Sensitivity |
 |-------|------|-------------|
@@ -75,7 +75,9 @@ ZIP dataset records contain no PII. GeoIP results are computed per-request from 
 
 | Boundary | Trust level | Notes |
 |----------|-------------|-------|
-| ZIP code SQLite database (embedded at build) | Fully trusted | Static, compiled into binary |
+| Embedded ZIP dataset | Trusted | Static source data compiled into the binary and used to seed an empty database |
+| Local SQLite database | Trusted local state | Default storage; WAL and a single writer with separate read connections |
+| Remote libSQL/Turso database | Operator-selected external service | Authenticated remote storage; table and index names are prefixed; the provider owns backups and only an empty remote database may be seeded from the embedded dataset |
 | ip-location-db MMDB datasets (downloaded at first run) | Trusted — HTTPS transport plus release SHA-256 verification; city data from DB-IP (CC BY 4.0), country/ASN from iptoasn.com (PDDL) | Caller lookup and optional country-deny signal; never stored |
 | Incoming HTTP requests | **Untrusted** | ZIP code validated as 5-digit numeric string; coordinate inputs bounds-checked; radius capped |
 
@@ -104,7 +106,7 @@ Failure mode for GeoIP: if the managed ip-location-db files are unavailable, loo
 - **No end-user accounts or login**: intentional. The operator token remains for server management features defined by AI.md.
 - **GeoIP databases downloaded at runtime**: intentional for size and freshness. DB-IP city data and iptoasn.com country/ASN source licenses follow AI.md PART 19.
 - **GeoIP lookup data is not retained**: configured country restrictions are a deny-only risk signal. Authentication and authorization still apply to every request that passes the country check.
-- **All responses include `Access-Control-Allow-Origin: *`**: intentional. Public data API designed for cross-origin browser use.
+- **CORS defaults to `*`**: public read-only data is cross-origin accessible by default; operators may configure an explicit allow-list or disable CORS under `server.cors`.
 
 ### API routes
 

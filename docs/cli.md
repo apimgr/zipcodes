@@ -23,7 +23,7 @@ The client stores `cli.yml` under the operating system's per-user configuration 
 The command accepts exactly one ZIP argument containing five digits. For example:
 
 ```sh
-zipcodes-cli --server https://your-server.example 90210
+zipcodes-cli --server http://localhost:8080 90210
 ```
 
 To look up multiple ZIP codes in one session, run `zipcodes-cli --tui`. The selected theme is stored in `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory. A `--server` value is saved as the primary only when no primary server is already configured.
@@ -32,7 +32,11 @@ Before a lookup, the client reads the server's autodiscovery document. If `serve
 
 ## Server options
 
-The `zipcodes` server binary accepts `--help`, `--version`, and `--status`; `--address`, `--port`, `--config`, `--data`, `--logs`, and `--backup`; `--mode`, `--debug`, and `--color`; `--update [yes|check|branch stable|beta|devel]`; `--service {start|restart|stop|reload|--install|--uninstall|--disable|--help}`; and `--maintenance` commands. `--update` defaults to `yes`; `--maintenance update` is an alias. Run `zipcodes --update check` to check without installing. `--update branch {stable|beta|devel}` persists the channel in the server configuration. Branch aliases `daily`, `rolling`, `dev`, and `development` are normalized to `devel`.
+The `zipcodes` server binary accepts `--help`, `--version`, and `--status`; `--address`, `--port`, `--config`, `--data`, `--cache`, `--log` / `--logs`, `--backup`, and `--pid`; `--mode`, `--debug`, and `--color`; `--i2p` / `--i2p=false`; `--update [yes|check|branch stable|beta|devel]`; `--service {start|restart|stop|reload|--install|--uninstall|--disable|--help}`; and `--maintenance` commands. The server PID file defaults to `/var/run/apimgr/zipcodes/zipcodes.pid` in system mode and `{data_dir}/zipcodes.pid` in user mode. Container and Windows runs skip PID-file creation because their runtime supervises the process. The explicit I2P flag takes precedence over `I2P_ENABLED`, which takes precedence over `server.i2p.enabled` and its computed default. `--update` defaults to `yes`; `--maintenance update` is an alias. Run `zipcodes --update check` to check without installing. `--update branch {stable|beta|devel}` persists the channel in the server configuration. Branch aliases `daily`, `rolling`, `dev`, and `development` are normalized to `devel`.
+
+`zipcodes --status` queries the local server health endpoint and prints the I2P eepsite state and address when available.
+
+`zipcodes --maintenance tor status` reports the managed Tor process and vanity search state. `zipcodes --maintenance tor validate` checks the Tor settings and generated `torrc`. Both commands query the running server when available and fall back to read-only local state.
 
 Service install, disable, and uninstall actions can alter system services and require the appropriate privileges. `--service --disable` stops and disables the service while retaining its service file and application data. `--service --help` prints service command help and current status.
 

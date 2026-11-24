@@ -28,7 +28,7 @@ The production Compose file is `docker/docker-compose.yml`; its host port is bou
 The `zipcodes-cli` client performs exact ZIP lookups against an operator-selected server:
 
 ```sh
-zipcodes-cli --server https://your-server.example 90210
+zipcodes-cli --server http://localhost:8080 90210
 ```
 
 Use `zipcodes-cli --tui` for interactive repeated lookups. Its terminal theme defaults to dark and can be selected with `--theme dark|light|auto`.

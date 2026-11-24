@@ -6,7 +6,33 @@ The server reads `server.yml` from its selected configuration directory and crea
 |---|---:|---|
 | `server.address` | `0.0.0.0` | Listener address |
 | `server.port` | selected at startup | Listener port |
+| `server.pidfile` | `true` | Create and validate the server PID file on startup; container runs skip PID files |
+| `server.daemonize` | `false` | Detach the server process from the terminal when daemonization is enabled for the start mode |
 | `server.fqdn` | empty | Public hostname supplied by the operator |
+| `server.tor.binary` | auto-detected | Tor executable used for the app-owned hidden service; when no executable is available Tor remains disabled |
+| `server.tor.expose` | `false` | Whether `/api/autodiscover` advertises the `.onion` address |
+| `server.tor.contact_email` | empty | Email shown only on `.onion` responses; no clearnet contact is used as a fallback |
+| `server.tor.use_network` | `false` | Routes app-determined outbound requests through the managed Tor SOCKS listener |
+| `server.tor.max_circuits` | `32` | Tor pending-circuit limit, from 1 to 128 |
+| `server.tor.startup_timeout` | `60` | Seconds to wait for the Tor control-port file, from 10 to 300 |
+| `server.tor.circuit_timeout` | `60` | Tor circuit build timeout in seconds, from 10 to 300 |
+| `server.tor.bootstrap_timeout` | `180` | Tor network bootstrap timeout in seconds, from 30 to 600 |
+| `server.tor.safe_logging` | `true` | Scrubs sensitive data from Tor logs |
+| `server.tor.max_streams_per_circuit` | `100` | Hidden-service stream limit, from 10 to 500 |
+| `server.tor.close_circuit_on_stream_limit` | `true` | Closes a circuit when its stream limit is exceeded |
+| `server.tor.bandwidth_rate` / `server.tor.bandwidth_burst` | `1 MB` / `2 MB` | Tor bandwidth rate and burst limits |
+| `server.tor.max_monthly_bandwidth` | `100 GB` | Monthly Tor accounting limit, or `unlimited` |
+| `server.tor.num_intro_points` | `3` | Hidden-service introduction points, from 3 to 10 |
+| `server.tor.virtual_port` | `80` | Virtual port exposed by the hidden service, from 1 to 65535 |
+| `server.i2p.enabled` | `true` in a container; otherwise `false` | Enables an I2P eepsite when an i2pd binary or SAM bridge is available; `--i2p` / `--i2p=false` overrides `I2P_ENABLED`, which overrides this setting |
+| `server.i2p.expose` | `false` | Advertises a healthy `.b32.i2p` address in `/api/autodiscover` when enabled |
+| `server.i2p.binary` | auto-detected | Optional path to the dedicated i2pd binary; when unavailable, the server may use the configured external SAM bridge |
+| `server.i2p.sam_address` | `127.0.0.1:7656` | External SAMv3 bridge address used when no i2pd binary is available |
+| `server.i2p.virtual_port` | `80` | Port exposed by the I2P eepsite |
+| `server.i2p.inbound_length`, `server.i2p.outbound_length` | `3` | I2P tunnel hop counts, each from 0 to 7 |
+| `server.i2p.inbound_quantity`, `server.i2p.outbound_quantity` | `5` | Parallel I2P tunnels, each from 1 to 16 |
+| `server.i2p.signature_type` | `7` | SAM destination signature type |
+| `server.i2p.bootstrap_timeout` | `300` | SAM session bootstrap timeout in seconds, from 30 to 600 |
 | `server.mode` | `production` | Application mode |
 | `server.database.driver` | `sqlite` | Database backend: `sqlite`/`sqlite2`/`sqlite3` or remote `libsql`/`turso` |
 | `server.database.url` | `{data_dir}/db/server.db` | SQLite path, or `libsql://`/`https://` remote connection URL; private-network `http://` is allowed only for loopback/private hosts; credential URLs belong in `secrets.yml` |
@@ -39,14 +65,17 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.security.allowlist` | `[]` | Trusted IP/CIDR entries that bypass GeoIP country restrictions |
 | `server.security.reports.retention_days` | `365` | Days to retain closed security reports; open reports are never purged |
 | `server.trusted_proxies.additional` | `[]` | Additional proxy IPs/CIDRs whose forwarding headers are trusted |
-| `server.rate_limit.enabled` | `true` | Enables request abuse limits |
-| `server.rate_limit.read.requests` | `120` | Read requests per IP per window |
+| `server.rate_limit.read.requests` | `120` | Read requests per IP, or per valid token, per window |
 | `server.rate_limit.read.window` | `60` | Read window in seconds |
-| `server.rate_limit.write.requests` | `10` | Write requests per IP per window |
+| `server.rate_limit.write.requests` | `10` | Write requests per IP, or per valid token, per window |
 | `server.rate_limit.write.window` | `60` | Write window in seconds |
-| `server.rate_limit.health.requests` | `120` | Health requests per IP per window |
+| `server.rate_limit.health.requests` | `120` | Health requests per IP, or per valid token, per window |
 | `server.rate_limit.health.window` | `60` | Health window in seconds |
-| `server.rate_limit.global_burst` | `240` | Global per-IP ceiling per minute |
+| `server.rate_limit.strict.requests` | `10` | Sensitive token actions per IP or owner per window |
+| `server.rate_limit.strict.window` | `900` | Sensitive-action window in seconds |
+| `server.rate_limit.auth_failures.requests` | `5` | Failed token-authentication attempts per IP before lockout |
+| `server.rate_limit.auth_failures.window` | `900` | Failed-authentication window in seconds |
+| `server.rate_limit.global_burst` | `240` | Global per-IP or per-token ceiling per minute |
 | `server.metrics.enabled` | `true` | Enables the internal Prometheus, Grafana, and Loki endpoints |
 | `server.metrics.root.enabled` | `true` | Enables root aliases at `/metrics` and `/metrics/{service}` |
 | `server.metrics.auth.allow_unauthenticated` | `false` | Disables service-token checks for firewalled metrics deployments only |
@@ -81,13 +110,13 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.notifications.email.from.email` | `no-reply@{fqdn}` | Sender address; defaults to `no-reply@localhost` when no FQDN is available |
 | `server.notifications.email.reply_to` | empty | Optional Reply-To address |
 | `server.notifications.email.events.*` | event-specific | Per-event operator email switches; SMTP must be configured and reachable |
-| `server.contact.admin.email` | empty | Operator notification recipient; `admin@{fqdn}` is used when a configured FQDN is available |
+| `server.contact.admin.email` | empty | Operator notification recipient; if unset, admin email notifications are skipped |
 | `server.contact.security.email` | `security@{fqdn}` | Public security contact; falls back to the private admin recipient when explicitly empty |
 | `server.contact.abuse.email` | empty | Public abuse report recipient; delivery falls back to general, then admin |
 | `server.contact.general.email` | empty | Fallback recipient for abuse, DMCA, and privacy reports; also the DPO page's email fallback |
 | `server.contact.dpo.name` | empty | Optional name shown on the data protection contact page |
 | `server.contact.dpo.email` | empty | DPO email shown publicly; an empty value falls back to `server.contact.general.email`, never admin |
-| `server.contact.{admin,security,abuse,general}.webhooks.*` | empty | Optional per-role webhook transports; webhook values are private and are never returned by public pages or APIs |
+| `server.contact.{admin,security,abuse,general}.webhooks.*` | empty | Optional per-role HTTPS transports (`telegram`, `discord`, `slack`, `mattermost`, `pushover`, `gotify`, or `generic`); signing secrets are generated under the matching role in `secrets.yml` |
 | `server.pages.contact.enabled` | `true` | Enables `/server/contact` and the instance-report line in security.txt |
 | `server.pages.contact.captcha` | `simple` | CAPTCHA provider: self-hosted `simple`, `recaptcha`, or `hcaptcha`; external providers require site and secret keys and use the simple fallback over Tor and I2P |
 | `server.pages.contact.captcha_site_key` | empty | Public widget key for reCAPTCHA or hCaptcha |
@@ -105,15 +134,16 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
 | `server.logging.access_format` | `apache` | Reserved setting; currently has no effect |
 | `server.logging.level` | `info` | Reserved setting; currently has no effect |
-| `web-security.cors` | `*` | CORS origin for this public API |
-| `web-ui.theme` | `dark` | Default page theme |
-| `web-ui.logo` | empty | Reserved setting; the pages currently use the application name as text |
-| `web-ui.favicon` | empty | Reserved setting; the pages currently use the bundled favicon |
-| `web-ui.notifications.enabled` | `true` | Reserved setting; announcements are not currently rendered |
-| `web-ui.notifications.announcements` | `[]` | Reserved announcement messages; currently not rendered |
-| `web-robots.allow` | `/`, `/api` | Paths listed as allowed in `robots.txt` |
-| `web-robots.deny` | `/debug` | Paths listed as disallowed in `robots.txt` |
-| `web-security.admin` | empty | Reserved setting; the current `security.txt` always points to GitHub Security Advisories |
+| `server.cors.allowed_origins` | `[*]` | Allowed browser origins; `[*]` permits any origin without credential headers, and `[""]` disables CORS |
+| `server.cors.allow_credentials` | `true` | Allow credential headers only for explicitly matched origins |
+| `server.cors.max_age` | `86400` | Preflight cache lifetime in seconds |
+| `server.seo.*` | Project defaults | Canonical URLs, robots directives, generated SEO/social tags, verification codes, sitemap limits, and feed title/item count |
+| `web.ui.theme` | `dark` | Default page theme (`dark`, `light`, or `auto`) |
+| `web.ui.accent` | empty | Optional accessible `#RRGGBB` accent color |
+| `web.robots.allow` | `[/]` | Public paths allowed by `robots.txt` and eligible for the sitemap |
+| `web.robots.deny` | `[/debug]` | Paths disallowed in `robots.txt` and excluded from the sitemap |
+| `web.announcements.enabled` | `true` | Enables the server-rendered site announcement banner |
+| `web.announcements.messages[]` | `[]` | Ordered announcements with an ID, type, text, optional UTC window, and dismissal setting |
 | `web.security.publish_pgp_key` | `true` | Publishes the project security public key at `/.well-known/pgp-key.asc` and includes it in security.txt while a keypair exists |
 | `web.security.keyservers` | `[keys.openpgp.org]` | Keyserver host names used for project key publication |
 | `web.security.report_url` | empty | Optional private vulnerability reporting URL used by the security overview |
@@ -121,33 +151,39 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.branding.title` | `Zipcodes API` | Public application name |
 | `server.branding.tagline` | `United States ZIP code lookup` | Public application tagline |
 | `server.branding.description` | Search and geographic data description | Public application description |
+| `server.branding.logo` | empty | Optional HTTPS/data URI or asset filename used as the site logo |
+| `server.branding.favicon` | empty | Optional HTTPS/data URI or asset filename used as the favicon |
 | `server.pages.help.content` | Project-specific help summary in Markdown | Appended to the server-rendered help page and returned as Markdown in its JSON API |
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
 
-The server reads `server.yml` and then merges `yaml.d/*.yml` and `yaml.d/*.yaml` in filename order. `yaml.d/branding.yml` holds `server.branding.*` settings. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. For example:
+The server merges built-in defaults, `server.yml`, regular `yaml.d/*.yml` and `yaml.d/*.yaml` files in byte-wise filename order, then `secrets.yml`. Branding, SEO, and `web.ui` belong in `yaml.d/branding.yml`; other `web.*` settings and CORS belong in `yaml.d/web.yml`; rate limits and token policy belong in `yaml.d/security.yml`. Startup automatically splits area sections out of older `server.yml` files and preserves a `0600` backup. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. Example `yaml.d/branding.yml`:
 
 The privacy page and `/api/{api_version}/server/privacy` mirror read `server.privacy.*`. `server.branding.content.privacy` is sanitized and appended after the built-in privacy sections. When `server.privacy.data.sold` is false (the default), no CCPA form is rendered and `POST /server/ccpa` returns `404`; when true, the privacy page exposes a CSRF-protected opt-out/opt-in form. The instance does not currently configure analytics tracking; list any other third-party service only when that service is actually enabled.
 
 SMTP settings can be overridden by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TLS`, `SMTP_FROM_NAME`, and `SMTP_FROM_EMAIL`. The SMTP password is sensitive configuration and must remain in `secrets.yml` or the environment rather than being exposed in status output or logs.
 
+Webhook URLs are configured under their recipient role in `yaml.d/contact.yml` or `server.yml`. At startup, the server generates a 32-byte signing secret for each configured transport when its matching `server.contact.{role}.webhooks.{transport}_secret` entry is empty, then stores that value in `secrets.yml` with mode `0600`. Share the secret only with the receiving endpoint. The server never includes webhook URLs or signing secrets in public responses or log messages.
+
 While running, the configuration manager checks `server.yml`, `yaml.d/`, `secrets.yml`, and `assets/` every five seconds. A valid change reloads the merged configuration. A malformed file keeps its last successfully parsed contents; malformed first-time files are ignored. Changes to `server.port`, `server.address`, `server.daemonize`, or the SSL, database, and Tor settings are reported as requiring a restart. Check `/server/healthz` or run `zipcodes --status` to see pending restart state and the affected settings.
 
 ```yaml
 server:
-  update:
-    branch: stable
-    auto_install: false
-    defer_days: 0
-    cli_min_version: ""
   branding:
     title: Zipcodes API
-    content:
-      header:
-        format: html
-        body: '<span>Community service</span>'
-      footer:
-        format: html
-        body: '<p>Operated by the community.</p>'
+    tagline: United States ZIP code lookup
+    description: Search ZIP codes and explore their geographic data through a public API.
+  seo:
+    title_separator: " - "
+    opengraph:
+      enabled: true
+      type: website
+    twitter:
+      enabled: true
+      card: summary_large_image
+web:
+  ui:
+    theme: dark
+    accent: ""
 ```
 
 Header and footer content accepts sanitized HTML. The about, privacy, and terms entries accept `html`, `md`, or `txt`; each body may be a single string or a language map with a `default` fallback. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, and `PORT` and `ADDRESS` override listener settings. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
@@ -162,6 +198,6 @@ Backup encryption uses the operator-managed `server.backup.encryption_password` 
 
 Retention is applied at startup and after backups. The daily backup scheduler defaults to 02:00 and the `security_cleanup` task defaults to 03:30 in `server.scheduler.timezone`; hourly incrementals are disabled by default. Security cleanup removes closed reports after `server.security.reports.retention_days` and never purges open reports. A scheduled backup is skipped when free space is below twice the previous full backup size or disk use is above `server.maintenance.cleanup.disk_threshold`. In remote mode the database provider owns remote backups; restore seeding is limited to an empty remote database.
 
-Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate per-user `cli.yml` containing `server.primary` and `ui.theme` (dark by default).
+Server configuration is operator-controlled through files and command-line options. Visitor theme and language preferences are managed by the server preferences pages and consent rules in AI.md. The CLI client has a separate per-user `cli.yml` containing `server.primary` and `ui.theme` (dark by default).
 
-Rate limit counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).
+Rate limiting is always active; its request and window limits are configurable, but there is no `enabled` switch. Valid bearer tokens use token-specific buckets, while unauthenticated or invalid-token requests use the client IP. Repeated failed bearer authentication locks out the IP for the configured window, even if a later request uses a valid token. Sensitive token actions have a separate strict limit. Counters are persisted in SQLite. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).
