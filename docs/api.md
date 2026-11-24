@@ -39,7 +39,7 @@ GeoIP lookups return IP-only results when data is unavailable. Private/internal 
 
 ## Server information routes
 
-The matching browser pages include `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/dpo`, `/server/help/mcp`, and the preferences and token pages. Corresponding versioned API routes are listed in the OpenAPI document; MCP is a machine-only endpoint and has no paired page requirement.
+The browser-facing pages include `/`, `/search`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/contact`, `/server/dpo`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`. Interactive API pages are `/server/docs/swagger` and `/server/docs/graphql`. Corresponding versioned API routes are listed in the OpenAPI document; machine-only endpoints such as MCP and token check have no paired page requirement.
 
 The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/.well-known/security.txt`, and `/.well-known/llms.txt`. The sitemap lists public HTML pages only; it does not list API endpoints. `/.well-known/pgp-key.asc` is available only when a project keypair exists and `web.security.publish_pgp_key` is enabled.
 
@@ -47,11 +47,11 @@ The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/.well
 
 `/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints.
 
-HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form and are stored in a first-party cookie.
+HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form; the theme cookie is written only when the visitor has accepted the Preferences cookie category.
 
 ## MCP
 
-The remote Streamable HTTP endpoint is `/api/{api_version}/server/mcp`; `/api/mcp` and `/mcp` are direct aliases. It accepts authenticated JSON-RPC 2.0 `POST` requests using the same owner or operator Bearer tokens as the REST API. It targets protocol revision `2026-07-28`, has no initialize handshake or session, and requires `MCP-Protocol-Version`, `Mcp-Method`, and `Accept: application/json, text/event-stream`. Tool names, descriptions, and input schemas are generated from the OpenAPI operations. Token-management operations and the MCP endpoint itself are excluded from the tool list. On a running instance, `/server/help/mcp` provides the client setup guide.
+The remote Streamable HTTP endpoint is `/api/{api_version}/server/mcp`; `/api/mcp` and `/mcp` are direct aliases. It accepts authenticated JSON-RPC 2.0 `POST` requests using the same owner or operator Bearer tokens as the REST API. It targets protocol revision `2026-07-28`, has no initialize handshake or session, and requires `MCP-Protocol-Version`, `Mcp-Method`, and `Accept: application/json, text/event-stream`. Tool names, descriptions, and input schemas are generated from the OpenAPI operations. Token-management and issuance operations, the cookie-bound `/server/preferences/**` family, and the MCP endpoint itself are excluded from the tool list. On a running instance, `/server/help/mcp` provides the client setup guide.
 
 ## Contact and security reporting
 
@@ -61,9 +61,9 @@ The optional `cve_requested` security-report checkbox is retained in the encrypt
 
 ## Preferences
 
-The browser preferences page is `/server/preferences`; its form currently saves the `theme` value (`dark`, `light`, or `auto`). The page displays the detected language but language changes are not implemented yet. `GET /api/{api_version}/server/preferences` returns the current `theme`, `lang`, and `prefs` values. `POST /api/{api_version}/server/preferences` accepts JSON or form values and applies valid theme changes; unsupported values, including `lang`, are returned in `ignored`.
+The browser preferences page is `/server/preferences`. It supports appearance, cookie consent, and application preferences. The current page displays the detected language but does not offer a working language selector or persist language changes. Preference cookies (`theme`, `lang`, and application preference cookies) are written only after the visitor accepts the Preferences cookie category. Without that consent, valid changes are ignored and no preference cookies are set. The header theme toggle is subject to the same gate. `GET /api/{api_version}/server/preferences` returns the current `theme`, `lang`, and `prefs` values. `POST /api/{api_version}/server/preferences` accepts JSON or form values and applies valid preferences only when consent is present; otherwise `data.consent_required` is `true` and `applied` is empty.
 
-Preference export/import is available at `/server/preferences/sync` and `/server/preferences/sync/import`. The sync page exports theme and language values as a URL and a base64url code. Import currently applies theme only; language is included in the data but is ignored. The API equivalents are `GET /api/{api_version}/server/preferences/sync` and `GET /api/{api_version}/server/preferences/sync/import`.
+Preference export/import is available at `/server/preferences/sync` and `/server/preferences/sync/import`. The sync page exports the allowed preferences as a URL and a base64url code. Import is additive and accepts the shared URL, a query string, or a short code; it applies only valid values and remains subject to the destination device's Preferences consent. The API equivalents are `GET /api/{api_version}/server/preferences/sync` and `GET /api/{api_version}/server/preferences/sync/import`. The import route can set preference cookies, so the entire cookie-bound `/server/preferences/**` route family is excluded from MCP.
 
 ## Owner tokens
 

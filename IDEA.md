@@ -28,7 +28,7 @@ owner_token: zipcodes_owner_token_qwhzkfta
 - Radius-based geographic query: all ZIP codes within N miles of a given ZIP code or coordinate
 - Caller GeoIP lookup (country, city, approximate coordinates) via ip-location-db datasets (DB-IP city under CC BY 4.0; iptoasn country and ASN under PDDL)
 - Full web frontend (server-side Go templates, dark/light/auto theme, PWA, mobile-first)
-- Server-rendered pages include `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/dpo`, `/server/contact`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`; `/server/docs/swagger` and `/server/docs/graphql` provide the interactive API interfaces. The shared page registry and each page's behavior follow AI.md.
+- Server-rendered pages include `/`, `/search`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/dpo`, `/server/contact`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`; `/server/docs/swagger` and `/server/docs/graphql` provide the interactive API interfaces. The shared page registry and each page's behavior follow AI.md.
 - CLI client (`zipcodes-cli`) for terminal lookup: `zipcodes-cli 90210`
 - OpenAPI JSON at `/api/{api_version}/server/swagger` with a server-rendered reference at `/server/docs/swagger`
 - GraphQL API at `/api/{api_version}/server/graphql` and a no-JavaScript form at `/server/docs/graphql`

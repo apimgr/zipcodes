@@ -3,7 +3,7 @@
 Zipcodes exposes public read-only ZIP and GeoIP lookups, plus authenticated owner-token management and MCP connections:
 
 - REST API under `/api/{api_version}` (default `/api/v1`, discoverable from `/api/autodiscover`) with an OpenAPI document at `/api/{api_version}/server/swagger` and browser UI at `/server/docs/swagger`.
-- Remote MCP Streamable HTTP at `/api/v1/server/mcp`, with `/api/mcp` and `/mcp` aliases. It uses the existing owner/operator Bearer tokens and exposes OpenAPI operations other than token management; see [API reference](api.md#mcp).
+- Remote MCP Streamable HTTP at `/api/{api_version}/server/mcp`, with `/api/mcp` and `/mcp` aliases. It uses the existing owner/operator Bearer tokens and exposes eligible OpenAPI operations, excluding token management and the cookie-bound `/server/preferences/**` family; see [API reference](api.md#mcp).
 - Read-only GraphQL at `/api/{api_version}/server/graphql`, with a browser interface at `/server/docs/graphql`.
 - The PWA manifest at `/manifest.json` and service worker at `/sw.js`.
 - `/robots.txt` and the generated `/sitemap.xml` for public page discovery.
@@ -14,7 +14,7 @@ Zipcodes exposes public read-only ZIP and GeoIP lookups, plus authenticated owne
 
 API clients can optionally use anonymous owner credentials to associate activity with an owner. A primary owner token manages linked tokens; linked tokens are for automation and cannot manage tokens. This is credential-based identity only: there are no user accounts, login sessions, or federated identity flows. See [API reference](api.md) and [Security](security.md) for token routes and handling.
 
-The project does not provide identity federation, user accounts, or a hosted API address. The CLI server URL is supplied with `--server`, `ZIPCODES_SERVER_PRIMARY`, or `server.primary` in its `cli.yml`.
+The project does not provide identity federation, user accounts, native app association links, or a hosted API address. The CLI server URL is supplied with `--server`, `ZIPCODES_SERVER_PRIMARY`, or `server.primary` in its `cli.yml`.
 
 ## I2P eepsite
 

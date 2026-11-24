@@ -25,7 +25,7 @@ The server initializes its SQLite database from the embedded dataset. It creates
 
 ## System service
 
-On a supported host, the server can install itself with `sudo zipcodes --service install`; then manage it through the host service manager. Alternatively, create a service unit that runs the binary as a dedicated unprivileged account with writable configuration, data, and log directories. Set the listener address and port explicitly for deployment. The supported service commands are `install`, `uninstall`, `start`, `stop`, `restart`, and `status`.
+On a supported host, install and start the service with `sudo zipcodes --service --install`; then manage it through the host service manager or use `--service start`, `--service stop`, `--service restart`, and `--service reload`. Use `--service --disable` to stop and disable it, or `--service --uninstall` to remove it. Alternatively, create a service unit that runs the binary as a dedicated unprivileged account with writable configuration, data, and log directories. Set the listener address and port explicitly for deployment. Run `zipcodes --service --help` for platform-specific details.
 
 ## CLI
 
