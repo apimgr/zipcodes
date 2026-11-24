@@ -2,7 +2,7 @@
 
 ZIP lookup routes are public and read-only; they do not require accounts or API keys. Owner tokens are optional credentials for associating caller activity with an anonymous owner and managing that owner's linked tokens. There are no user accounts, profiles, or passwords. ZIP input and radius/coordinate values are validated, SQL uses bound parameters, and CORS defaults to `*` without credentialed requests. Forwarded client-IP headers are honored only from trusted peers.
 
-Per-IP request limits default to 120 read requests/minute, 10 non-read requests/minute, 120 health requests/minute, and a 240 request/minute per-IP ceiling across endpoint classes. Counters are stored in `server.db` and keyed by a SHA-256 digest of the client IP and endpoint class; expired events are removed as requests arrive.
+Request limits default to 120 read requests/minute, 10 non-read requests/minute, 120 health requests/minute, and a 240 request/minute ceiling across endpoint classes. Valid Bearer tokens use token-specific buckets; requests without a valid token use the resolved client IP. Counters use SQLite by default and may use a configured Valkey/Redis backend; if that backend is unavailable, the server falls back to in-process counters and reports degraded cache health. Client IPs are normalized before use, and counter keys do not expose raw IP addresses. Expired events are removed as requests arrive.
 
 The default SQLite database uses separate read-only and single-writer pools with WAL, a 10 second busy timeout, and a shutdown WAL checkpoint. Keep it on local storage; network and FUSE filesystems are unsupported. Remote libSQL/Turso is supported with TLS URLs and provider-managed access controls. Remote tables and indexes use the `srv_` prefix, and the remote database itself is not included in local backup archives. Keep connection URLs containing credentials and `server.database.token` in `secrets.yml`; credentials are never written to logs or health responses.
 
@@ -34,7 +34,7 @@ Backups include `security/pgp.pub.asc`, `security/pgp.priv.asc.enc`, and `securi
 
 ## Public and discovery endpoints
 
-- `/server/healthz` is public; its root `/healthz` alias is disabled by default and can be enabled with `server.healthz.root.enabled`. `/api/v1/server/healthz` and `/api/healthz` are machine endpoints. See [API reference](api.md) for content negotiation.
+- `/server/healthz` is public; its root `/healthz` alias is disabled by default and can be enabled with `server.healthz.root.enabled`. `/api/{api_version}/server/healthz` and `/api/healthz` are machine endpoints. See [API reference](api.md) for content negotiation.
 - `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation routes without private configuration.
 - `/.well-known/security.txt` is the canonical security contact file.
 - `robots.txt` and `sitemap.xml` expose public crawling guidance and public HTML routes.

@@ -12,9 +12,16 @@ The client stores `cli.yml` under the operating system's per-user configuration 
 
 | Option | Purpose |
 |---|---|
+| `--config NAME` | Select a config profile under the per-user configuration directory, or use a path; `.yml` and `.yaml` are detected when the extension is omitted |
 | `--server URL` | Select an API server |
 | `--token TOKEN` | Validate and use an owner or operator Bearer token; save only when `auth.token` is empty or invalid |
+| `--token-file FILE` | Read a Bearer token from a file for this run |
+| `--output table\|json\|plain` | Choose the lookup output format |
 | `--theme dark\|light\|auto` | Select the terminal theme for this run; `NO_COLOR` disables color |
+| `--color auto\|yes\|no` | Control colored terminal output; automatic mode respects `NO_COLOR` |
+| `--lang CODE` | Select the output language for this run |
+| `--debug[=true\|false]` | Enable or disable diagnostic output |
+| `--update check\|yes` | Check for a CLI release or install the verified update |
 | `--version` | Print version, commit, build time, Go version, and OS/architecture |
 | `--help` | Show usage |
 | `--shell completions [SHELL]` | Print completions for bash, zsh, fish, sh, dash, ksh, PowerShell, or pwsh |
@@ -28,9 +35,11 @@ In CLI mode, the command accepts exactly one ZIP argument containing five digits
 zipcodes-cli --server http://localhost:8080 90210
 ```
 
-The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. It uses `server.primary`, `auth.token`, `display.mode` (`auto` by default), and `theme.mode` (`auto` by default). Token priority is `--token`, `ZIPCODES_TOKEN`, then `auth.token`; the environment variable never saves to the file. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when `auth.token` is empty or invalid. If no server is configured in an interactive terminal, the Bubble Tea setup screen tests the URL, optionally validates a token, and saves the connection before continuing.
+The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. Use `--config NAME` for a profile in that directory (`dev` resolves to an existing `dev.yml` or `dev.yaml`), or supply a path. It reads `server.primary`, `auth.token`, `auth.token_file`, `display.mode` (`auto` by default), `theme.mode` (`auto` by default), `output.format` (`table` by default), `defaults.lang`, and the debug/color defaults. Token priority is `--token`, `--token-file`, `ZIPCODES_TOKEN`, `auth.token_file`, then `auth.token`; environment and flag values are not saved. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when the stored token is empty or invalid. If no server is configured in an interactive terminal, the Bubble Tea setup screen tests the URL, optionally validates a token, and saves the connection before continuing.
 
-Before a lookup, the client reads the server's autodiscovery document. If `server.update.cli_min_version` is set and the client version is older, the client refuses the lookup and prints the required version and update command.
+Lookup output precedence is `--output`, `ZIPCODES_OUTPUT_FORMAT`, `output.format`, then `table`. The available formats are `table`, `json`, and `plain`. For example, `zipcodes-cli --server https://example.invalid --output json 90210` prints the server's ZIP record as JSON.
+
+At startup, the client reads autodiscovery and checks the current platform against the server's published version and SHA-256. Interactive runs prompt before an available update; use `--update check` to report status or `--update yes` to download, verify, replace, and restart the CLI. A client below `server.update.cli_min_version` refuses ordinary requests and prints the required update command. The server must have the release binary, `version.txt`, and matching `sha256.txt` provisioned in its CLI directory; see the [API reference](api.md#autodiscovery).
 
 ## Server options
 

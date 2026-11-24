@@ -31,7 +31,7 @@ The `zipcodes-cli` client performs exact ZIP lookups against an operator-selecte
 zipcodes-cli --server http://localhost:8080 90210
 ```
 
-With no command in an interactive terminal, `zipcodes-cli` opens its lookup interface automatically. In a non-interactive shell, pass one five-digit ZIP code. Display mode is configured in `cli.yml`; `--theme dark|light|auto` selects a theme for the current run. Private deployments may supply `--token` to validate and use an owner or operator Bearer token; the client stores it only in the mode-`0600` per-user config file.
+With no command in an interactive terminal, `zipcodes-cli` opens its lookup interface automatically. In a non-interactive shell, pass one five-digit ZIP code. Display mode is configured in `cli.yml`; `--theme dark|light|auto` selects a theme for the current run. The CLI checks autodiscovery for its platform's release on startup; use `--update check` to inspect or `--update yes` to download, verify, replace, and restart. Private deployments may supply `--token` to validate and use an owner or operator Bearer token; the client stores it only in the mode-`0600` per-user config file.
 
 Set `ZIPCODES_SERVER_PRIMARY` or `server.primary` in `cli.yml` to save the server choice. This project does not define a hosted endpoint.
 
@@ -54,9 +54,9 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 ## API and pages
 
 - REST API: `/api/{api_version}` (default `v1`, discoverable through `/api/autodiscover`; the trailing-slash form redirects with `301`; see [API reference](docs/api.md)).
-- OpenAPI JSON and UI: `/api/v1/server/swagger` and `/server/docs/swagger`.
-- GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
-- Remote MCP endpoint and connection guide: `/api/v1/server/mcp` and `/server/help/mcp` (owner/operator Bearer token required).
+- OpenAPI JSON and UI: `/api/{api_version}/server/swagger` (default `v1`) and `/server/docs/swagger`.
+- GraphQL endpoint and browser interface: `/api/{api_version}/server/graphql` (default `v1`) and `/server/docs/graphql`.
+- Remote MCP endpoint and connection guide: `/api/{api_version}/server/mcp` (default `v1`) and `/server/help/mcp` (owner/operator Bearer token required).
 - Internal monitoring endpoints: Prometheus at `/server/metrics`, Grafana dashboard JSON at `/server/metrics/grafana`, and recent Loki-compatible HTTP logs at `/server/metrics/loki`; each uses its own generated service token from `secrets.yml`.
 - Server-rendered pages: `/`, `/search`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/contact`, `/server/dpo`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
 - Security contact: `/.well-known/security.txt`.

@@ -4,7 +4,7 @@ ZIP lookup routes are public and read-only. The default REST API base path is `/
 
 ## Autodiscovery
 
-`GET /api/autodiscover` returns the active API version, project name and version, public origin URLs, and the minimum supported CLI version. It adds `data.onion` or `data.i2p` only when the corresponding overlay is healthy and its `server.tor.expose` or `server.i2p.expose` setting is `true`; both settings default to `false`.
+`GET /api/autodiscover` returns a standard `{ok, data}` response. `data` contains `api.current_version`, the project `name` and `version`, request-derived public `urls`, `cli_versions`, and `cli_min_version`. The server publishes CLI versions only for operator-provisioned release files in `{data_dir}/cli` (or `cli.binary_download.dir`) whose entries in `sha256.txt` match the recomputed file hashes; `version.txt` supplies each published version. `GET /cli/binaries/{project_name}-cli-{os}-{arch}` streams a verified release binary and records `cli.update_started`; downloads are public unless `cli.binary_download.require_auth` is enabled. `cli_min_version` is empty unless configured. Discovery adds `data.onion` or `data.i2p` only when the corresponding overlay is healthy and its `server.tor.expose` or `server.i2p.expose` setting is `true`; both settings default to `false`. Overlay addresses are separate from the clearnet `urls` list.
 
 ## ZIP code routes
 
@@ -47,7 +47,21 @@ The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/.well
 
 `/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints.
 
-HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form; the theme cookie is written only when the visitor has accepted the Preferences cookie category.
+HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form. Preferences form, sync, and API writes set theme, language, and application preference cookies only when the visitor has accepted the Preferences cookie category. Language resolution checks a supported `?lang=` value, then the language cookie, then the best supported `Accept-Language` match, and finally English; a `?lang=` link pins its supported choice.
+
+GraphQL is read-only. The root query fields are `zipcode(code: String!)`, `search(city: String, state: String)`, and `stats`. `zipcode` returns one record; `search` requires a city, a state, or both; `stats` returns total ZIP codes, cities, and states. ZIP records expose `zip`, `zipcode`, `zipCode`, `city`, `state`, `stateFull`, `county`, `timezone`, `areaCodes`, `latitude`, `longitude`, and nested `coordinates { latitude longitude }`. The API accepts a GraphQL query by `GET` query parameter or `POST` with a JSON body or `application/graphql` body. For example:
+
+```graphql
+query GetZipcode {
+  zipcode(code: "90210") {
+    zip
+    city
+    state
+    county
+    timezone
+  }
+}
+```
 
 ## MCP
 
@@ -61,7 +75,7 @@ The optional `cve_requested` security-report checkbox is retained in the encrypt
 
 ## Preferences
 
-The browser preferences page is `/server/preferences`. It supports appearance, cookie consent, and application preferences. The current page displays the detected language but does not offer a working language selector or persist language changes. Preference cookies (`theme`, `lang`, and application preference cookies) are written only after the visitor accepts the Preferences cookie category. Without that consent, valid changes are ignored and no preference cookies are set. The header theme toggle is subject to the same gate. `GET /api/{api_version}/server/preferences` returns the current `theme`, `lang`, and `prefs` values. `POST /api/{api_version}/server/preferences` accepts JSON or form values and applies valid preferences only when consent is present; otherwise `data.consent_required` is `true` and `applied` is empty.
+The browser preferences page is `/server/preferences`. Its single form supports appearance, language, cookie consent, and application preferences. The Language section lists supported languages by native name; Automatic returns to `Accept-Language` detection. Preference cookies (`theme`, `lang`, and application preference cookies) are written only after the visitor accepts the Preferences cookie category. Without that consent, valid changes are ignored and no preference cookies are set. The header theme toggle is subject to the same gate. `GET /api/{api_version}/server/preferences` returns the current `theme`, `lang`, and `prefs` values. `POST /api/{api_version}/server/preferences` accepts JSON or form values and applies valid preferences only when consent is present; otherwise `data.consent_required` is `true` and `applied` is empty.
 
 Preference export/import is available at `/server/preferences/sync` and `/server/preferences/sync/import`. The sync page exports the allowed preferences as a URL and a base64url code. Import is additive and accepts the shared URL, a query string, or a short code; it applies only valid values and remains subject to the destination device's Preferences consent. The API equivalents are `GET /api/{api_version}/server/preferences/sync` and `GET /api/{api_version}/server/preferences/sync/import`. The import route can set preference cookies, so the entire cookie-bound `/server/preferences/**` route family is excluded from MCP.
 

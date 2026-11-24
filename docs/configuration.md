@@ -1,6 +1,6 @@
 # Configuration
 
-The server reads `server.yml` from its selected configuration directory and creates defaults on first startup.
+The server reads `server.yml` and the `yaml.d/` area files from its selected configuration directory and creates defaults on first startup. CLI binary distribution settings belong in `yaml.d/maintenance.yml` under the top-level `cli` key.
 
 | Setting | Default | Purpose |
 |---|---:|---|
@@ -44,6 +44,8 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.update.auto_install` | `false` | Let the scheduled update check stage eligible releases when the process started elevated |
 | `server.update.defer_days` | `0` | Delay scheduled stable/beta updates by 0–365 days; manual checks ignore this value |
 | `server.update.cli_min_version` | `""` | Operator-managed minimum client version advertised by autodiscovery |
+| `cli.binary_download.dir` | `{data_dir}/cli` | Operator-provisioned companion CLI release files (`version.txt`, `sha256.txt`, and platform binaries) |
+| `cli.binary_download.require_auth` | `false` | Require a valid Bearer token to download companion CLI binaries |
 | `server.max_radius_miles` | `100` | Maximum accepted radius |
 | `server.baseurl` | `/` | URL prefix used for browser routes and embedded assets when the application is mounted below a reverse proxy path |
 | `server.healthz.root.enabled` | `false` | Mount `/healthz` as a root-level alias to the `/server/healthz` frontend |
