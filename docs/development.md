@@ -12,7 +12,7 @@ Use Docker and Make. Go builds and checks run in `casjaysdev/go:latest`; the rep
 
 ## Tests and static analysis
 
-`make test` runs `go vet`, `govulncheck`, Go tests with coverage, and the configured coverage threshold in the Go container. `./tests/run_tests.sh` runs the Docker-based binary and HTTP smoke checks. The GitHub CI workflow also runs `staticcheck`, build, vulnerability, and secret scanning.
+`make test` runs `go vet`, `govulncheck`, Go tests with coverage, and the configured coverage threshold in the Go container. `./tests/run_tests.sh` runs the Docker-based basic checks. Run `./tests/e2e.sh` for browser E2E checks and `./tests/incus.sh` for the systemd and OpenRC lifecycle matrix when needed; these are standalone, on-demand scripts. The GitHub CI workflow also runs `staticcheck`, build, vulnerability, and secret scanning.
 
 ## Documentation
 
