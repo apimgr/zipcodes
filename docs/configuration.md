@@ -8,6 +8,12 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.port` | selected at startup | Listener port |
 | `server.fqdn` | empty | Public hostname supplied by the operator |
 | `server.mode` | `production` | Application mode |
+| `server.database.driver` | `sqlite` | Database backend: `sqlite`/`sqlite2`/`sqlite3` or remote `libsql`/`turso` |
+| `server.database.url` | `{data_dir}/db/server.db` | SQLite path, or `libsql://`/`https://` remote connection URL; private-network `http://` is allowed only for loopback/private hosts; credential URLs belong in `secrets.yml` |
+| `server.database.pool.max_open` | `25` | Maximum pooled database connections (SQLite read pool; remote pool) |
+| `server.database.pool.max_idle` | `5` | Maximum idle database connections |
+| `server.database.pool.max_lifetime` | `5m` | Maximum pooled connection lifetime |
+| `server.database.pool.max_idle_time` | `1m` | Maximum idle connection time |
 | `server.update.branch` | `stable` | Release channel: `stable`, `beta`, or `devel`; aliases normalize to `devel` |
 | `server.update.auto_install` | `false` | Let the scheduled update check stage eligible releases when the process started elevated |
 | `server.update.defer_days` | `0` | Delay scheduled stable/beta updates by 0–365 days; manual checks ignore this value |
@@ -31,6 +37,7 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.geoip.allow_countries` | `[]` | When nonempty, allow only these ISO country codes; takes precedence over `deny_countries` |
 | `server.geoip.presets` | `{}` | Operator-authored named ISO country lists; presets are never applied automatically |
 | `server.security.allowlist` | `[]` | Trusted IP/CIDR entries that bypass GeoIP country restrictions |
+| `server.security.reports.retention_days` | `365` | Days to retain closed security reports; open reports are never purged |
 | `server.trusted_proxies.additional` | `[]` | Additional proxy IPs/CIDRs whose forwarding headers are trusted |
 | `server.rate_limit.enabled` | `true` | Enables request abuse limits |
 | `server.rate_limit.read.requests` | `120` | Read requests per IP per window |
@@ -107,6 +114,10 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `web-robots.allow` | `/`, `/api` | Paths listed as allowed in `robots.txt` |
 | `web-robots.deny` | `/debug` | Paths listed as disallowed in `robots.txt` |
 | `web-security.admin` | empty | Reserved setting; the current `security.txt` always points to GitHub Security Advisories |
+| `web.security.publish_pgp_key` | `true` | Publishes the project security public key at `/.well-known/pgp-key.asc` and includes it in security.txt while a keypair exists |
+| `web.security.keyservers` | `[keys.openpgp.org]` | Keyserver host names used for project key publication |
+| `web.security.report_url` | empty | Optional private vulnerability reporting URL used by the security overview |
+| `web.security.policy` | empty | Optional Markdown text replacing the default disclosure policy |
 | `server.branding.title` | `Zipcodes API` | Public application name |
 | `server.branding.tagline` | `United States ZIP code lookup` | Public application tagline |
 | `server.branding.description` | Search and geographic data description | Public application description |
@@ -141,13 +152,15 @@ server:
 
 Header and footer content accepts sanitized HTML. The about, privacy, and terms entries accept `html`, `md`, or `txt`; each body may be a single string or a language map with a `default` fallback. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, and `PORT` and `ADDRESS` override listener settings. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
 
-The database currently supports local SQLite only. `server.database.url` selects its file path and defaults to `{data_dir}/db/server.db`; `DB_PATH` takes precedence. The read pool defaults to 25 open and 5 idle connections, a 5 minute maximum lifetime, and a 1 minute maximum idle time. SQLite uses a dedicated single-connection write pool, WAL, `synchronous=NORMAL`, a 10 second busy timeout, and read-only query connections. Place the database on local storage; network and FUSE filesystems are unsupported. Remote libSQL/Turso is not available in this build.
+SQLite is the default. Its URL is a local path and defaults to `{data_dir}/db/server.db`; `DB_PATH` overrides it for local SQLite. SQLite uses separate read-only and single-writer pools, WAL, `synchronous=NORMAL`, and a 10 second busy timeout. Keep the database on local storage; network and FUSE filesystems are unsupported.
 
-Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token), `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values), and separate `server.metrics.auth.tokens.prometheus`, `.grafana`, and `.loki` credentials. The server creates these metric service tokens using the `mtr_` prefix and writes the file with owner-only permissions (`0600`); on first startup it prints the generated operator token once, but never prints metrics tokens. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed.
+For a remote libSQL/Turso database, set `server.database.driver: libsql` and use either `libsql://host` with `?authToken=...` in the URL or an `https://host` URL plus `server.database.token` in `secrets.yml`. Plain `http://` is accepted only for loopback or private hosts, including hostnames that resolve exclusively to private addresses. The URL takes precedence when it already contains `authToken`. `DATABASE_URL` initializes the saved connection on first run only; set `DATABASE_DRIVER` when the URL does not select a driver by scheme. Remote tables and indexes use the `srv_` prefix. The URL token and separate token are secrets: never include them in logs or public configuration output. Remote database contents are managed and backed up by the provider; local backup archives do not contain the remote database.
+
+Sensitive server credentials are stored separately in `secrets.yml` beside `server.yml`, not in `server.yml`. It contains `server.token` (the operator token), `server.database.token` (remote libSQL token when kept separate from the URL), `server.security.encryption_key` plus `server.security.encryption_key_version` (the key and version used to encrypt owner-token values and security-report contact metadata), and separate `server.metrics.auth.tokens.prometheus`, `.grafana`, and `.loki` credentials. The server creates these metric service tokens using the `mtr_` prefix and writes the file with owner-only permissions (`0600`); on first startup it prints the generated operator token once, but never prints metrics tokens. Protect and back up the secret file as sensitive data. Losing the encryption key prevents stored owner tokens from being revealed and prevents security-report status notices from being sent.
 
 Backup encryption uses the operator-managed `server.backup.encryption_password` key in `secrets.yml`; it is never generated automatically. Without a password, backups are unencrypted and startup logs a warning. When any compliance standard is enabled, backup creation is refused until a password is configured. Backups are written under `BACKUP_DIR` when set, otherwise to the platform backup location with a data-directory fallback. `--backup` overrides that directory. Run `zipcodes --maintenance backup [filename]` for a manual backup, `zipcodes --maintenance backup test [file]` to verify one, and `zipcodes --maintenance restore <file>` for a CLI-only restore. Restore prompts for an encrypted archive password without echoing it and applies restore size limits. A nonempty restore requires root confirmation or the service account plus the operator token. `--include-ssl` and `--include-data` add those optional content groups to a manual backup.
 
-Retention is applied at startup and after backups. The daily scheduler defaults to 02:00 in `server.scheduler.timezone`; hourly incrementals are disabled by default. A scheduled backup is skipped when free space is below twice the previous full backup size or disk use is above `server.maintenance.cleanup.disk_threshold`. This application currently uses a local SQLite database and has no remote libSQL/Turso connection or remote restore-seeding implementation.
+Retention is applied at startup and after backups. The daily backup scheduler defaults to 02:00 and the `security_cleanup` task defaults to 03:30 in `server.scheduler.timezone`; hourly incrementals are disabled by default. Security cleanup removes closed reports after `server.security.reports.retention_days` and never purges open reports. A scheduled backup is skipped when free space is below twice the previous full backup size or disk use is above `server.maintenance.cleanup.disk_threshold`. In remote mode the database provider owns remote backups; restore seeding is limited to an empty remote database.
 
 Server configuration is operator-controlled through files and command-line options. Browser theme preference is stored in a visitor cookie and does not change server configuration. The preferences page currently saves theme only; its language field is not yet writable. The CLI client has a separate per-user `cli.yml` containing `server.primary` and `ui.theme` (dark by default).
 

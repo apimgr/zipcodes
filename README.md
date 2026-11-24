@@ -58,7 +58,7 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 - GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
 - Remote MCP endpoint and connection guide: `/api/v1/server/mcp` and `/server/help/mcp` (owner/operator Bearer token required).
 - Internal monitoring endpoints: Prometheus at `/server/metrics`, Grafana dashboard JSON at `/server/metrics/grafana`, and recent Loki-compatible HTTP logs at `/server/metrics/loki`; each uses its own generated service token from `secrets.yml`.
-- Server-rendered pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/contact`, `/server/dpo`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
+- Server-rendered pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/contact`, `/server/dpo`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
 - Security contact: `/.well-known/security.txt`.
 - Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.
 - Empty Atom and RSS feeds: `/feed.xml` and `/rss.xml` (ZIP records have no per-record permalink or publication timestamp).
@@ -72,6 +72,18 @@ The [documentation index](docs/index.md) links installation, configuration, API,
 ## Development
 
 Follow the Docker-based build and test targets in the Makefile. The dataset updater reads its pinned upstream source; do not invent records or derive area codes from geography. See [development](docs/development.md).
+
+## Disclaimer
+
+This software is provided "as is" without warranty of any kind. Use it at your own risk.
+
+- **No warranty:** The authors are not responsible for damages, data loss, or other issues arising from use of this software.
+- **No professional advice:** This software does not provide legal, financial, medical, or other professional advice.
+- **Third-party services:** External APIs and services are subject to their own terms.
+- **Security:** The project follows security practices, but no software can be guaranteed free of vulnerabilities.
+- **Production use:** Evaluate the software and its configuration before deploying it in production.
+
+By using this software, you acknowledge that you have read and understood this disclaimer.
 
 ## License
 

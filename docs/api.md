@@ -37,9 +37,9 @@ GeoIP lookups return IP-only results when data is unavailable. Private/internal 
 
 The matching browser pages include `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/dpo`, `/server/help/mcp`, and the preferences and token pages. Corresponding versioned API routes are listed in the OpenAPI document; MCP is a machine-only endpoint and has no paired page requirement.
 
-The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, and `/.well-known/security.txt`. The sitemap lists public HTML pages only; it does not list API endpoints.
+The server also publishes `/robots.txt`, `/sitemap.xml`, `/favicon.ico`, `/.well-known/security.txt`, and `/.well-known/llms.txt`. The sitemap lists public HTML pages only; it does not list API endpoints. `/.well-known/pgp-key.asc` is available only when a project keypair exists and `web.security.publish_pgp_key` is enabled.
 
-`/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints. `/.well-known/pgp-key.asc` returns 404 because this deployment has no security-report keypair.
+`/feed.xml` (Atom 1.0) and `/rss.xml` (RSS 2.0) are always available. ZIP records do not have individual public pages or creation times, so both feeds contain no entries. They use request-derived absolute URLs and support ETag conditional requests. `/.well-known/llms.txt` and `/llms.txt` list the public API and documentation endpoints.
 
 HTML pages support server-rendered search and require no JavaScript. Theme changes use a CSRF-protected same-origin form and are stored in a first-party cookie.
 
@@ -49,7 +49,7 @@ The remote Streamable HTTP endpoint is `/api/{api_version}/server/mcp`; `/api/mc
 
 ## Contact and security reporting
 
-`GET /api/{api_version}/server/contact` describes the available report types, form fields, fill token, and CAPTCHA challenge. `POST` uses a submit, review, and confirm flow; it does not deliver on the first request. Abuse, DMCA, and privacy submissions require SMTP. Security reports use a rotating `security_id`, are encrypted with the server AES-256-GCM key before database storage, and still succeed when SMTP is unavailable. The response returns a `tracking_id`; the status URL requires a separate one-use-per-day token sent only in the acknowledgment email. `/.well-known/security.txt` is the only security.txt route.
+`GET /api/{api_version}/server/contact` describes the available report types, form fields, fill token, and CAPTCHA challenge. `POST` uses a submit, review, and confirm flow; it does not deliver on the first request. Abuse, DMCA, and privacy submissions require SMTP. Security reports use a rotating `security_id`, are encrypted with the project OpenPGP key when present and otherwise with the server AES-256-GCM key before database storage, and still succeed when SMTP is unavailable. The response returns a `tracking_id`; the status URL requires a separate one-use-per-day token sent only in the acknowledgment email. The security key fingerprint and public download URL appear in the `/api/{api_version}/server/security` mirror when publication is enabled; `/.well-known/security.txt` is the only security.txt route.
 
 ## Preferences
 
