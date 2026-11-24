@@ -28,7 +28,7 @@ owner_token: zipcodes_owner_token_qwhzkfta
 - Radius-based geographic query: all ZIP codes within N miles of a given ZIP code or coordinate
 - Caller GeoIP lookup (country, city, approximate coordinates) via ip-location-db datasets (DB-IP city under CC BY 4.0; iptoasn country and ASN under PDDL)
 - Full web frontend (server-side Go templates, dark/light/auto theme, PWA, mobile-first)
-- Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`
+- Server-rendered pages include `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/dpo`, `/server/contact`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`; `/server/docs/swagger` and `/server/docs/graphql` provide the interactive API interfaces. The shared page registry and each page's behavior follow AI.md.
 - CLI client (`zipcodes-cli`) for terminal lookup: `zipcodes-cli 90210`
 - OpenAPI JSON at `/api/{api_version}/server/swagger` with a server-rendered reference at `/server/docs/swagger`
 - GraphQL API at `/api/{api_version}/server/graphql` and a no-JavaScript form at `/server/docs/graphql`
@@ -69,7 +69,7 @@ AI.md also defines anonymous owner/linked API tokens and shared server pages. Th
 | `timezone` | string — IANA timezone identifier | Public |
 | `area_codes` | string[] — telephone area codes | Public |
 
-No PII stored or served. GeoIP results are computed per-request from the caller's IP and never stored.
+ZIP dataset records contain no PII. GeoIP results are computed per-request from the caller's IP and are not retained. The required security-report workflow stores report content and researcher contact details encrypted at rest; public status pages expose only report state, maintainer comments, and disclosure dates.
 
 ### Trust boundaries & external services
 
@@ -79,7 +79,7 @@ No PII stored or served. GeoIP results are computed per-request from the caller'
 | ip-location-db MMDB datasets (downloaded at first run) | Trusted — HTTPS transport plus release SHA-256 verification; city data from DB-IP (CC BY 4.0), country/ASN from iptoasn.com (PDDL) | Caller lookup and optional country-deny signal; never stored |
 | Incoming HTTP requests | **Untrusted** | ZIP code validated as 5-digit numeric string; coordinate inputs bounds-checked; radius capped |
 
-No external API calls are made on behalf of user requests.
+No external API calls are made on behalf of ZIP lookup requests. Optional GeoIP data refreshes, configured notification delivery, and researcher-supplied OpenPGP key retrieval are separate server workflows governed by AI.md.
 
 Failure mode for GeoIP: if the managed ip-location-db files are unavailable, lookups return the IP without location fields and country filtering fails open. Private/internal addresses are never looked up or country-blocked. Country restrictions are disabled by default and, when configured, they run after rate limiting and before authentication as a deny-only signal; they do not replace authentication or authorization. All ZIP code lookup endpoints remain read-only.
 
@@ -123,4 +123,4 @@ Project-defined lookup routes use `/api/{api_version}` (default `v1`, reported b
 - GET `/api/{api_version}/me`: return caller IP and available GeoIP fields; location fields may be absent when GeoIP data is unavailable.
 - GET `/api/{api_version}/geoip?ip={address}` and GET `/api/{api_version}/geoip.txt?ip={address}`: return GeoIP lookup data in JSON or text.
 - POST `/api/{api_version}/geoip/batch`: resolve a bounded batch of IP addresses and return their GeoIP results.
-Browser pages currently registered by the application: `/` and `/search` provide ZIP search; `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/docs/swagger`, and `/server/docs/graphql` provide public information, status, or API interfaces. AI.md additionally requires its shared server-page registry and template-owned pages, which remain part of implementation scope.
+Browser pages provide ZIP search, public service information and status, privacy and terms disclosures, security reporting, preferences, and interactive API documentation. The complete current page inventory is listed under Product scope; AI.md governs shared shell, consent, error-page, registry, and accessibility behavior.

@@ -86,6 +86,13 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.pages.contact.captcha_site_key` | empty | Public widget key for reCAPTCHA or hCaptcha |
 | `server.pages.contact.captcha_secret_key` | empty | Provider verification key; migrate it to `secrets.yml` and keep it out of responses and logs |
 | `server.pages.contact.antispam.*` | project defaults | Fill and review timing, per-IP/email/global limits, markup/link rules, block lists, strike bans, and duplicate suppression |
+| `server.privacy.data.sold` | `false` | Controls data-sharing statements and whether the conditional CCPA opt-out form is shown |
+| `server.privacy.data.stored_on_server` | `true` | States whether data is stored on the instance |
+| `server.privacy.data.sharing[]` | project defaults | Publicly listed data-sharing conditions, timing, and data categories |
+| `server.privacy.retention.*` | project defaults | Public retention statement and whether export/deletion options are available |
+| `server.privacy.consent.*` | project defaults | Consent banner visibility, sold/not-sold message, policy link, button labels, and preferences link |
+| `server.privacy.cookies.{essential,preferences,analytics}.*` | project defaults | Cookie category descriptions and whether each nonessential category is offered |
+| `server.privacy.third_party.services[]` | `[]` | Third-party services listed by name, purpose, data sent, and HTTPS privacy-policy URL |
 | `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
@@ -107,6 +114,8 @@ The server reads `server.yml` from its selected configuration directory and crea
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
 
 The server reads `server.yml` and then merges `yaml.d/*.yml` and `yaml.d/*.yaml` in filename order. `yaml.d/branding.yml` holds `server.branding.*` settings. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. For example:
+
+The privacy page and `/api/{api_version}/server/privacy` mirror read `server.privacy.*`. `server.branding.content.privacy` is sanitized and appended after the built-in privacy sections. When `server.privacy.data.sold` is false (the default), no CCPA form is rendered and `POST /server/ccpa` returns `404`; when true, the privacy page exposes a CSRF-protected opt-out/opt-in form. The instance does not currently configure analytics tracking; list any other third-party service only when that service is actually enabled.
 
 SMTP settings can be overridden by `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_TLS`, `SMTP_FROM_NAME`, and `SMTP_FROM_EMAIL`. The SMTP password is sensitive configuration and must remain in `secrets.yml` or the environment rather than being exposed in status output or logs.
 

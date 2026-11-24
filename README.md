@@ -58,7 +58,7 @@ The server creates `server.yml` with defaults on first start. Command-line optio
 - GraphQL endpoint and browser interface: `/api/v1/server/graphql` and `/server/docs/graphql`.
 - Remote MCP endpoint and connection guide: `/api/v1/server/mcp` and `/server/help/mcp` (owner/operator Bearer token required).
 - Internal monitoring endpoints: Prometheus at `/server/metrics`, Grafana dashboard JSON at `/server/metrics/grafana`, and recent Loki-compatible HTTP logs at `/server/metrics/loki`; each uses its own generated service token from `secrets.yml`.
-- Server pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
+- Server-rendered pages: `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/contact`, `/server/dpo`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
 - Security contact: `/.well-known/security.txt`.
 - Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.
 - Empty Atom and RSS feeds: `/feed.xml` and `/rss.xml` (ZIP records have no per-record permalink or publication timestamp).
