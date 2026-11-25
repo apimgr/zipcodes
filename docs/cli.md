@@ -1,9 +1,10 @@
 # CLI reference
 
-`zipcodes-cli` performs an exact ZIP lookup against a server. The server address is selected in this order: `--server`, `ZIPCODES_SERVER_PRIMARY`, then `server.primary` in `cli.yml`.
+`zipcodes-cli` performs ZIP lookups and can invoke any API route on the configured server. The server address is selected in this order: `--server`, `ZIPCODES_SERVER_PRIMARY`, then `server.primary` in `cli.yml`.
 
 ```sh
 zipcodes-cli --server https://example.invalid 90210
+zipcodes-cli --server https://example.invalid api GET /api/v2/zipcodes/90210
 ```
 
 The client stores `cli.yml` under the operating system's per-user configuration directory in `apimgr/zipcodes/`. When `--server` is used and no primary server is already configured, that address is saved there. The URL must be absolute HTTP or HTTPS and must not contain credentials. This project does not define a hosted API endpoint.
@@ -20,22 +21,29 @@ The client stores `cli.yml` under the operating system's per-user configuration 
 | `--theme dark\|light\|auto` | Select the terminal theme for this run; `NO_COLOR` disables color |
 | `--color auto\|yes\|no` | Control colored terminal output; automatic mode respects `NO_COLOR` |
 | `--lang CODE` | Select the output language for this run |
-| `--debug[=true\|false]` | Enable or disable diagnostic output |
+| `--debug[=BOOL]` | Enable or disable diagnostic output; values use the shared truthy/falsy parser |
 | `--update check\|yes` | Check for a CLI release or install the verified update |
 | `--version` | Print version, commit, build time, Go version, and OS/architecture |
 | `--help` | Show usage |
 | `--shell completions [SHELL]` | Print completions for bash, zsh, fish, sh, dash, ksh, PowerShell, or pwsh |
 | `--shell init [SHELL]` | Print the shell initialization command |
 
-Display mode is detected automatically. With no command, an interactive terminal opens the Bubble Tea lookup screen. Enter a ZIP code and press Enter; use `q` or Escape to leave. A command argument always selects plain CLI mode. `TERM=dumb` and headless runs do not start the interface. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`; because the default static client does not include native GUI support, `gui` uses the TUI when a terminal is available and otherwise reports `gui_unavailable`.
+Display mode is detected automatically. With no command, a native GUI build opens its home screen on a supported local display; otherwise an interactive terminal opens the Bubble Tea menu. The menu and GUI both provide ZIP lookup and a generic API request screen. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`. A GUI build is a separate optional artifact produced with `make build BUILD_GUI=1`; its filenames use `zipcodes-cli-gui-{os}-{arch}`. The default static client does not include GUI support; an explicit `display.mode: gui` reports `gui_unavailable` and never falls back to the TUI. Remote SSH/Mosh sessions use the TUI, and a command argument always selects CLI mode. `TERM=dumb` and headless runs do not start an interface.
 
-In CLI mode, the command accepts exactly one ZIP argument containing five digits. For example:
+In CLI mode, a ZIP argument performs an exact lookup and must contain five digits. The `api` command accepts an HTTP method, a relative `/api/` path, and an optional JSON body. It sends the request to the configured server, uses the resolved Bearer token, and prints the response body (pretty-printed when it is JSON). Absolute URLs and paths outside `/api/` are rejected.
+
+```sh
+zipcodes-cli api GET '/api/v2/zipcodes/search?q=Los%20Angeles&state=CA'
+zipcodes-cli api POST /api/v2/server/preferences '{"theme":"dark"}'
+```
+
+For example, an exact lookup can still be run directly:
 
 ```sh
 zipcodes-cli --server http://localhost:8080 90210
 ```
 
-The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. Use `--config NAME` for a profile in that directory (`dev` resolves to an existing `dev.yml` or `dev.yaml`), or supply a path. It reads `server.primary`, `auth.token`, `auth.token_file`, `display.mode` (`auto` by default), `theme.mode` (`auto` by default), `output.format` (`table` by default), `defaults.lang`, and the debug/color defaults. Token priority is `--token`, `--token-file`, `ZIPCODES_TOKEN`, `auth.token_file`, then `auth.token`; environment and flag values are not saved. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when the stored token is empty or invalid. If no server is configured in an interactive terminal, the Bubble Tea setup screen tests the URL, optionally validates a token, and saves the connection before continuing.
+The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. Use `--config NAME` for a profile in that directory (`dev` resolves to an existing `dev.yml` or `dev.yaml`), or supply a path. It reads `server.primary`, `auth.token`, `auth.token_file`, `display.mode` (`auto` by default), `theme.mode` (`auto` by default), `output.format` (`table` by default), `defaults.lang`, and the debug/color defaults. Token priority is `--token`, `--token-file`, `ZIPCODES_TOKEN`, `auth.token_file`, then `auth.token`; environment and flag values are not saved. The resolved language is sent in `Accept-Language` on autodiscovery, auth checks, lookups, API calls, and binary updates. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when the stored token is empty or invalid. On first GUI launch, the setup screen tests the server URL and optional token before connecting. Saving the connection stores it in `cli.yml`; selecting automatic login startup writes a per-user startup entry for Linux, macOS, or Windows. TUI setup remains available in terminal sessions.
 
 Lookup output precedence is `--output`, `ZIPCODES_OUTPUT_FORMAT`, `output.format`, then `table`. The available formats are `table`, `json`, and `plain`. For example, `zipcodes-cli --server https://example.invalid --output json 90210` prints the server's ZIP record as JSON.
 
@@ -43,7 +51,7 @@ At startup, the client reads autodiscovery and checks the current platform again
 
 ## Server options
 
-The `zipcodes` server binary accepts `--help`, `--version`, and `--status`; `--address`, `--port`, `--config`, `--data`, `--cache`, `--log` / `--logs`, `--backup`, and `--pid`; `--mode`, `--debug`, and `--color`; `--i2p` / `--i2p=false`; `--update [yes|check|branch stable|beta|devel]`; `--service {start|restart|stop|reload|--install|--uninstall|--disable|--help}`; and `--maintenance` commands. The server PID file defaults to `/var/run/apimgr/zipcodes/zipcodes.pid` in system mode and `{data_dir}/zipcodes.pid` in user mode. Container and Windows runs skip PID-file creation because their runtime supervises the process. The explicit I2P flag takes precedence over `I2P_ENABLED`, which takes precedence over `server.i2p.enabled` and its computed default. `--update` defaults to `yes`; `--maintenance update` is an alias. Run `zipcodes --update check` to check without installing. `--update branch {stable|beta|devel}` persists the channel in the server configuration. Branch aliases `daily`, `rolling`, `dev`, and `development` are normalized to `devel`.
+The `zipcodes` server binary accepts `--help`, `--version`, and `--status`; `--address`, `--port`, `--config`, `--data`, `--cache`, `--log` / `--logs`, `--backup`, and `--pid`; `--mode`, `--debug`, and `--color`; `--i2p` / `--i2p=false`; `--update [yes|check|branch stable|beta|devel]`; `--service {start|restart|stop|reload|--install|--uninstall|--disable|--help}`; and `--maintenance` commands. Boolean options accept case-insensitive truthy values (`1`, `y`, `t`, `yes`, `true`, `on`, `ok`, `enable`, `enabled`, `yep`, `yup`, `yeah`, `aye`, `si`, `oui`, `da`, `hai`, `affirmative`, `accept`, `allow`, `grant`, `sure`, `totally`) and falsy values (`0`, `n`, `f`, `no`, `false`, `off`, `disable`, `disabled`, `nope`, `nah`, `nay`, `nein`, `non`, `niet`, `iie`, `lie`, `negative`, `reject`, `block`, `revoke`, `deny`, `never`, `noway`, `none`). Both `--flag=value` and `--flag value` are accepted. Mode precedence is `--mode`, `MODE`, `server.mode`, then `production`; debug precedence is an explicitly supplied `--debug`, `DEBUG`, the `debug` mode default, then disabled. The server PID file defaults to `/var/run/apimgr/zipcodes/zipcodes.pid` in system mode and `{data_dir}/zipcodes.pid` in user mode. Container and Windows runs skip PID-file creation because their runtime supervises the process. The explicit I2P flag takes precedence over `I2P_ENABLED`, which takes precedence over `server.i2p.enabled` and its computed default. `--update` defaults to `yes`; `--maintenance update` is an alias. Run `zipcodes --update check` to check without installing. `--update branch {stable|beta|devel}` persists the channel in the server configuration. Branch aliases `daily`, `rolling`, `dev`, and `development` are normalized to `devel`.
 
 `zipcodes --status` queries the local server health endpoint and prints the I2P eepsite state and address when available.
 

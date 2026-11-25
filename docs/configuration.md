@@ -1,6 +1,6 @@
 # Configuration
 
-The server reads `server.yml` and the `yaml.d/` area files from its selected configuration directory and creates defaults on first startup. CLI binary distribution settings belong in `yaml.d/maintenance.yml` under the top-level `cli` key.
+The server reads `server.yml` and the `yaml.d/` area files from its selected configuration directory and creates defaults on first startup. CLI binary distribution settings belong in `yaml.d/maintenance.yml` under the top-level `cli` key. Mode precedence is `--mode`, `MODE`, `server.mode`, then `production`. Debug precedence is explicit `--debug`, `DEBUG`, the `debug` mode default, then disabled; all boolean configuration and flag inputs use the project's shared truthy/falsy values.
 
 | Setting | Default | Purpose |
 |---|---:|---|
@@ -33,7 +33,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.i2p.inbound_quantity`, `server.i2p.outbound_quantity` | `5` | Parallel I2P tunnels, each from 1 to 16 |
 | `server.i2p.signature_type` | `7` | SAM destination signature type |
 | `server.i2p.bootstrap_timeout` | `300` | SAM session bootstrap timeout in seconds, from 30 to 600 |
-| `server.mode` | `production` | Application mode |
+| `server.mode` | `production` | Application mode; overridden by `MODE`, then `--mode` |
 | `server.database.driver` | `sqlite` | Database backend: `sqlite`/`sqlite2`/`sqlite3` or remote `libsql`/`turso` |
 | `server.database.url` | `{data_dir}/db/server.db` | SQLite path, or `libsql://`/`https://` remote connection URL; private-network `http://` is allowed only for loopback/private hosts; credential URLs belong in `secrets.yml` |
 | `server.database.pool.max_open` | `25` | Maximum pooled database connections (SQLite read pool; remote pool) |

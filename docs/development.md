@@ -9,6 +9,7 @@ Use Docker and Make. Go builds and checks run in `casjaysdev/go:latest`; the rep
 - `make dev` builds development binaries into a project-scoped temporary directory.
 - `make local` builds the server and CLI for the host platform under the gitignored `binaries/` directory.
 - `make build` cross-compiles the server and CLI for the supported OS/architecture matrix.
+- `make build BUILD_GUI=1` additionally creates separate GUI-tagged CLI binaries for Linux, macOS, and Windows. These optional binaries dynamically load platform graphics libraries; the default server, CLI, and TUI builds remain static and do not include GUI dependencies.
 
 ## Tests and static analysis
 

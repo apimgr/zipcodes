@@ -10,7 +10,7 @@ With Docker Compose:
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Open `http://172.17.0.1:64580/` on the Docker host. For a native run, download the release binary, then start it with `./zipcodes --port 8080` and open `http://127.0.0.1:8080/`. The search page works without JavaScript. See the [installation guide](installation.md) for persistent storage and service setup.
+Open `http://172.17.0.1:64580/` on the Docker host. For a native Linux AMD64 run, download `zipcodes-linux-amd64`, then start it with `./zipcodes-linux-amd64 --address 127.0.0.1 --port 8080` and open `http://127.0.0.1:8080/`. The search page works without JavaScript. See the [installation guide](installation.md) for persistent storage and service setup.
 
 The companion CLI connects to an explicitly configured server:
 

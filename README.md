@@ -25,15 +25,19 @@ The production Compose file is `docker/docker-compose.yml`; its host port is bou
 
 ## Client
 
-The `zipcodes-cli` client performs exact ZIP lookups against an operator-selected server:
+The `zipcodes-cli` client performs exact ZIP lookups and can call API routes on an operator-selected server:
 
 ```sh
 zipcodes-cli --server http://localhost:8080 90210
+zipcodes-cli --server http://localhost:8080 api GET /api/v2/zipcodes/nearby?zip=90210\&radius=10
 ```
 
-With no command in an interactive terminal, `zipcodes-cli` opens its lookup interface automatically. In a non-interactive shell, pass one five-digit ZIP code. Display mode is configured in `cli.yml`; `--theme dark|light|auto` selects a theme for the current run. The CLI checks autodiscovery for its platform's release on startup; use `--update check` to inspect or `--update yes` to download, verify, replace, and restart. Private deployments may supply `--token` to validate and use an owner or operator Bearer token; the client stores it only in the mode-`0600` per-user config file.
+With no command in an interactive terminal, `zipcodes-cli` opens its lookup and API menu automatically. In a non-interactive shell, pass one five-digit ZIP code. Display mode is configured in `cli.yml`; `--theme dark|light|auto` selects a theme for the current run. The CLI checks autodiscovery for its platform's release on startup; use `--update check` to inspect or `--update yes` to download, verify, replace, and restart. The default client is static and GUI-free; `make build BUILD_GUI=1` creates separate optional `zipcodes-cli-gui-{os}-{arch}` binaries for Linux, macOS, and Windows. Private deployments may supply `--token` to validate and use an owner or operator Bearer token; the client stores it only in the mode-`0600` per-user config file.
+
+The native GUI's current toolkit does not yet expose its accessibility tree to platform screen readers. Use the TUI or CLI for assistive-technology access.
 
 Set `ZIPCODES_SERVER_PRIMARY` or `server.primary` in `cli.yml` to save the server choice. This project does not define a hosted endpoint.
+The `api` subcommand accepts an HTTP method, relative `/api/` path, and optional JSON request body; it uses the configured Bearer token and rejects absolute URLs.
 
 ## Search
 
