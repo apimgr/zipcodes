@@ -113,7 +113,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.notifications.email.reply_to` | empty | Optional Reply-To address |
 | `server.notifications.email.events.*` | event-specific | Per-event operator email switches; SMTP must be configured and reachable |
 | `server.contact.admin.email` | empty | Operator notification recipient; if unset, admin email notifications are skipped |
-| `server.contact.security.email` | `security@{fqdn}` | Public security contact; falls back to the private admin recipient when explicitly empty |
+| `server.contact.security.email` | `security@{fqdn}` | Secondary security contact; an explicitly empty value falls back to the private admin recipient for internal delivery only and is omitted from public pages and `security.txt` |
 | `server.contact.abuse.email` | empty | Public abuse report recipient; delivery falls back to general, then admin |
 | `server.contact.general.email` | empty | Fallback recipient for abuse, DMCA, and privacy reports; also the DPO page's email fallback |
 | `server.contact.dpo.name` | empty | Optional name shown on the data protection contact page |

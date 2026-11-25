@@ -30,7 +30,7 @@ Tor requests use onion URLs and UTC timestamps, suppress clearnet email addresse
 
 Contact roles can deliver notifications through `server.contact.{admin,security,abuse,general}.webhooks`. Supported names are `telegram`, `discord`, `slack`, `mattermost`, `pushover`, `gotify`, and `generic`. Each configured HTTPS destination receives the adapter-specific request format described in [configuration](configuration.md), plus an HMAC-SHA256 signature, Unix timestamp, UUIDv7 delivery ID, event name, and application User-Agent. Signing secrets are generated per role and transport in `secrets.yml`; they are not exposed in public pages, APIs, or logs.
 
-Security-role webhook bodies contain the already encrypted report. Abuse, DMCA, and privacy submissions use their resolved role destinations and include submitted report content, so configure those endpoints as private destinations. Admin notifications contain summaries and must not include user-submitted content.
+Webhook payloads contain event summaries only; they never contain report bodies or reporter contact details. Security webhooks include the tracking ID and the CLI command operators use to retrieve the encrypted report. The full encrypted security report is delivered by email. Abuse, DMCA, and privacy reports are delivered by email to their resolved role recipients; webhook notifications contain summaries only. Admin notifications also contain summaries and must not include user-submitted content.
 
 Webhook delivery runs asynchronously. Failed sends retry after 1 minute, 5 minutes, 15 minutes, 1 hour, 6 hours, and 24 hours, reusing the same delivery ID; after the final failure, the server logs `notify.webhook_failed` without printing the endpoint URL or signing secret.
 
