@@ -5,7 +5,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | Setting | Default | Purpose |
 |---|---:|---|
 | `server.address` | `0.0.0.0` | Listener address |
-| `server.port` | selected at startup | Listener port |
+| `server.port` | random unused port in `64000`–`64999`; `80` in an application container | Listener port; the chosen value is saved to `server.yml` |
 | `server.pidfile` | `true` | Create and validate the server PID file on startup; container runs skip PID files |
 | `server.daemonize` | `false` | Detach the server process from the terminal when daemonization is enabled for the start mode |
 | `server.fqdn` | empty | Public hostname supplied by the operator |

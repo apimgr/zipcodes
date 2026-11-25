@@ -1,81 +1,117 @@
 # Zipcodes
 
 [![CI](https://github.com/apimgr/zipcodes/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/zipcodes/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/apimgr/zipcodes)](https://github.com/apimgr/zipcodes/releases)
 [![License](https://img.shields.io/github/license/apimgr/zipcodes)](LICENSE.md)
 [![Documentation](https://readthedocs.org/projects/apimgr-zipcodes/badge/?version=latest)](https://apimgr-zipcodes.readthedocs.io/)
 
-Zipcodes is a public, read-only US ZIP code lookup service. It provides a server-rendered search page, a versioned REST API, a read-only GraphQL endpoint, optional caller GeoIP lookup, and a companion CLI.
+Zipcodes is a public, read-only service for searching United States ZIP codes by code, city, state, or geographic distance. It provides a browser search page, REST and GraphQL APIs, optional caller GeoIP lookup, and a companion client.
 
 ## Features
 
-- Exact ZIP lookup, city/state search, autocomplete, and radius search.
-- Public read-only REST and GraphQL APIs.
-- Server-rendered search interface and installable PWA shell.
-- Optional GeoIP lookup for the caller or supplied IP addresses.
-- Companion CLI and embedded, indexed ZIP data.
-- Six embedded locale catalogs: English (`en`), Spanish (`es`), French (`fr`), Arabic (`ar`), German (`de`), and Italian (`it`). See the [translation guide](docs/translating.md).
+- Exact ZIP lookup, city/state search, autocomplete, statistics, and radius search.
+- Public read-only REST and GraphQL APIs with interactive documentation.
+- Server-rendered, mobile-friendly search pages that work without JavaScript.
+- Optional caller GeoIP lookup and optional Tor and I2P service exposure.
+- Companion CLI with interactive terminal mode and separate optional GUI builds.
+- Six embedded interface languages: English, Spanish, French, Arabic, German, and Italian.
 
 The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. The source does not provide telephone area codes, so `area_codes` is empty. See [LICENSE.md](LICENSE.md) for attribution.
 
-## Production
+## Install
 
-Download a release for your operating system and architecture from [GitHub Releases](https://github.com/apimgr/zipcodes/releases), then run the server binary. It creates its configuration and data files on first start. The default HTTP port is selected at startup; use `--help` for supported options.
+Download the latest release from [GitHub Releases](https://github.com/apimgr/zipcodes/releases/latest).
 
-The production Compose file is `docker/docker-compose.yml`; its host port is bound to `172.17.0.1:64580`. For native installs, use the release binary and run it under a service manager with dedicated writable configuration, data, and log directories. Persistent data should be stored outside the repository checkout. See [installation](docs/installation.md) and [configuration](docs/configuration.md).
+### Linux
 
-## Client
+| Architecture | Server | CLI |
+|---|---|---|
+| amd64 | `zipcodes-linux-amd64` | `zipcodes-cli-linux-amd64` |
+| arm64 | `zipcodes-linux-arm64` | `zipcodes-cli-linux-arm64` |
 
-The `zipcodes-cli` client performs exact ZIP lookups and can call API routes on an operator-selected server:
+```sh
+arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+curl -q -LSsf "https://github.com/apimgr/zipcodes/releases/latest/download/zipcodes-linux-${arch}" -o zipcodes
+chmod +x zipcodes
+```
+
+Move the binary to a directory on your `PATH` if you want to run `zipcodes` from any directory.
+
+### macOS
+
+| Architecture | Server | CLI |
+|---|---|---|
+| Intel (x86_64) | `zipcodes-darwin-amd64` | `zipcodes-cli-darwin-amd64` |
+| Apple Silicon (arm64) | `zipcodes-darwin-arm64` | `zipcodes-cli-darwin-arm64` |
+
+```sh
+arch=$(uname -m | sed 's/x86_64/amd64/')
+curl -q -LSsf "https://github.com/apimgr/zipcodes/releases/latest/download/zipcodes-darwin-${arch}" -o zipcodes
+chmod +x zipcodes
+xattr -d com.apple.quarantine zipcodes 2>/dev/null || true
+```
+
+Move the binary to a directory on your `PATH` if you want to run `zipcodes` from any directory.
+
+### Windows
+
+| Architecture | Server | CLI |
+|---|---|---|
+| amd64 | `zipcodes-windows-amd64.exe` | `zipcodes-cli-windows-amd64.exe` |
+| arm64 | `zipcodes-windows-arm64.exe` | `zipcodes-cli-windows-arm64.exe` |
+
+Download the matching executable from the release page and add its directory to `PATH`.
+
+### FreeBSD
+
+| Architecture | Server | CLI |
+|---|---|---|
+| amd64 | `zipcodes-freebsd-amd64` | `zipcodes-cli-freebsd-amd64` |
+| arm64 | `zipcodes-freebsd-arm64` | `zipcodes-cli-freebsd-arm64` |
+
+Download the matching binary, then run `chmod +x zipcodes-freebsd-*` before starting it.
+
+## Docker
+
+The production Compose file is `docker/docker-compose.yml`. It uses the published image and persists configuration, database, and logs under `docker/volumes/`.
+
+```sh
+docker compose -f docker/docker-compose.yml up -d
+```
+
+The default host port is `172.17.0.1:64580`. See the [installation guide](docs/installation.md) before changing exposure or storage settings.
+
+## Client CLI
+
+Install the `zipcodes-cli` binary for your operating system and architecture from the same release page. Choose a server explicitly; this project does not define a hosted endpoint.
 
 ```sh
 zipcodes-cli --server http://localhost:8080 90210
-zipcodes-cli --server http://localhost:8080 api GET /api/v2/zipcodes/nearby?zip=90210\&radius=10
+zipcodes-cli --server http://localhost:8080 api GET '/api/v1/zipcodes/nearby?zip=90210&radius=10'
 ```
 
-With no command in an interactive terminal, `zipcodes-cli` opens its lookup and API menu automatically. In a non-interactive shell, pass one five-digit ZIP code. Display mode is configured in `cli.yml`; `--theme dark|light|auto` selects a theme for the current run. The CLI checks autodiscovery for its platform's release on startup; use `--update check` to inspect or `--update yes` to download, verify, replace, and restart. The default client is static and GUI-free; `make build BUILD_GUI=1` creates separate optional `zipcodes-cli-gui-{os}-{arch}` binaries for Linux, macOS, and Windows. Private deployments may supply `--token` to validate and use an owner or operator Bearer token; the client stores it only in the mode-`0600` per-user config file.
+With no command in an interactive terminal, a GUI-enabled build opens its GUI when a local display is available; otherwise the client opens its TUI. `--theme dark|light|auto` selects the terminal theme, and `--update check` or `--update yes` checks or installs a verified client update. Optional GUI builds are separate `zipcodes-cli-gui-{os}-{arch}` release files. See the [CLI reference](docs/cli.md) for options, configuration, and token use.
 
-The native GUI's current toolkit does not yet expose its accessibility tree to platform screen readers. Use the TUI or CLI for assistive-technology access.
+## Server
 
-Set `ZIPCODES_SERVER_PRIMARY` or `server.primary` in `cli.yml` to save the server choice. This project does not define a hosted endpoint.
-The `api` subcommand accepts an HTTP method, relative `/api/` path, and optional JSON request body; it uses the configured Bearer token and rejects absolute URLs.
-
-## Search
-
-Open the server root page to search by ZIP code, city, or state. Radius search accepts an origin ZIP or coordinates and is bounded by the server's configured maximum (100 miles by default).
-
-```sh
-curl -H 'Accept: application/json' http://localhost:8080/api/v1/zipcodes/90210
-curl -H 'Accept: application/json' 'http://localhost:8080/api/v1/zipcodes/nearby?zip=90210&radius=10'
-zipcodes-cli --server http://localhost:8080 90210
-```
-
-The CLI requires an operator-selected server URL. Configure it with `--server`, `ZIPCODES_SERVER_PRIMARY`, or `server.primary` in `cli.yml`. This project does not define a hosted service URL.
+Run `zipcodes --help` for server options. On first start, the server creates its configuration and data files. Use the [installation guide](docs/installation.md) to configure persistent directories or install a system service. Server configuration is operator-managed; the application has no web admin panel.
 
 ## Configuration
 
-The server creates `server.yml` with defaults on first start. Command-line options and environment variables can override settings; there is no admin web panel or runtime settings API. See [configuration reference](docs/configuration.md).
+The server reads `server.yml`, ordered `yaml.d/` area files, and the separate `secrets.yml`. See the [configuration reference](docs/configuration.md) for settings, environment variables, and secret handling.
 
-## API and pages
+## API
 
-- REST API: `/api/{api_version}` (default `v1`, discoverable through `/api/autodiscover`; the trailing-slash form redirects with `301`; see [API reference](docs/api.md)).
-- OpenAPI JSON and UI: `/api/{api_version}/server/swagger` (default `v1`) and `/server/docs/swagger`.
-- GraphQL endpoint and browser interface: `/api/{api_version}/server/graphql` (default `v1`) and `/server/docs/graphql`.
-- Remote MCP endpoint and connection guide: `/api/{api_version}/server/mcp` (default `v1`) and `/server/help/mcp` (owner/operator Bearer token required).
-- Internal monitoring endpoints: Prometheus at `/server/metrics`, Grafana dashboard JSON at `/server/metrics/grafana`, and recent Loki-compatible HTTP logs at `/server/metrics/loki`; each uses its own generated service token from `secrets.yml`.
-- Server-rendered pages: `/`, `/search`, `/server/about`, `/server/help`, `/server/healthz`, `/server/privacy`, `/server/terms`, `/server/security`, `/server/security/policy`, `/server/security/thanks`, `/server/security/report/{tracking_id}`, `/server/contact`, `/server/dpo`, `/server/help/mcp`, `/server/preferences`, `/server/preferences/tokens`, and `/server/preferences/sync`. The optional root `/healthz` alias is disabled by default; see [configuration](docs/configuration.md).
-- Security contact: `/.well-known/security.txt`.
-- Discovery endpoints: `/.well-known/llms.txt` and `/llms.txt`.
-- Empty Atom and RSS feeds: `/feed.xml` and `/rss.xml` (ZIP records have no per-record permalink or publication timestamp).
+- REST base: `/api/{api_version}` (default `v1`); discover the active version at `/api/autodiscover`.
+- OpenAPI JSON: `/api/{api_version}/server/swagger`; browser reference: `/server/docs/swagger`.
+- GraphQL: `/api/{api_version}/server/graphql`; browser interface: `/server/docs/graphql`.
+- Read-only ZIP search pages are available at `/` and `/search`.
 
-All ZIP lookup endpoints are public and read-only. GeoIP lookup is informational for callers; the optional operator-configured country deny/allow rules can reject requests after rate limiting, while always failing open when country data is unavailable. ZIP dataset reads are unchanged.
-
-## Documentation
-
-The [documentation index](docs/index.md) links installation, configuration, API, CLI, security, integration, development, and translation guides. Documentation is built with MkDocs Material and hosted through ReadTheDocs.
+The project does not publish a hosted API URL. See the [API reference](docs/api.md), [security guide](docs/security.md), and [integrations guide](docs/integrations.md) for discovery, authentication, monitoring, and reporting details.
 
 ## Development
 
-Follow the Docker-based build and test targets in the Makefile. The dataset updater reads its pinned upstream source; do not invent records or derive area codes from geography. See [development](docs/development.md).
+Builds and Go checks run in Docker using `casjaysdev/go:latest`; do not run Go tools on the host. Use `make build` for the eight server and CLI platform combinations, `make test` for tests, vet, vulnerability checking, and coverage, and `make build BUILD_GUI=1` for optional GUI client artifacts. See the [development guide](docs/development.md) for the other check scripts and dataset update process.
 
 ## Disclaimer
 

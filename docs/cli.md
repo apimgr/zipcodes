@@ -28,11 +28,20 @@ The client stores `cli.yml` under the operating system's per-user configuration 
 | `--shell completions [SHELL]` | Print completions for bash, zsh, fish, sh, dash, ksh, PowerShell, or pwsh |
 | `--shell init [SHELL]` | Print the shell initialization command |
 
-Display mode is detected automatically. With no command, a native GUI build opens its home screen on a supported local display; otherwise an interactive terminal opens the Bubble Tea menu. The menu and GUI both provide ZIP lookup and a generic API request screen. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`. A GUI build is a separate optional artifact produced with `make build BUILD_GUI=1`; its filenames use `zipcodes-cli-gui-{os}-{arch}`. The default static client does not include GUI support; an explicit `display.mode: gui` reports `gui_unavailable` and never falls back to the TUI. Remote SSH/Mosh sessions use the TUI, and a command argument always selects CLI mode. `TERM=dumb` and headless runs do not start an interface.
+Display mode is detected automatically. With no command, a native GUI build opens its home screen on a supported local display; otherwise an interactive terminal opens the Bubble Tea menu. The menu and GUI expose the same ZIP command tree, in the same order as help: `lookup`, `search`, `nearby`, `city`, `state`, `autocomplete`, `stats`, `random`, and `dataset`, followed by the generic API request screen. The optional `display.mode` setting in `cli.yml` can be `auto`, `tui`, or `gui`. A GUI build is a separate optional artifact produced with `make build BUILD_GUI=1`; its filenames use `zipcodes-cli-gui-{os}-{arch}`. The default static client does not include GUI support; an explicit `display.mode: gui` reports `gui_unavailable` and never falls back to the TUI. Remote SSH/Mosh sessions use the TUI, and a command argument always selects CLI mode. `TERM=dumb` and headless runs do not start an interface.
 
-In CLI mode, a ZIP argument performs an exact lookup and must contain five digits. The `api` command accepts an HTTP method, a relative `/api/` path, and an optional JSON body. It sends the request to the configured server, uses the resolved Bearer token, and prints the response body (pretty-printed when it is JSON). Absolute URLs and paths outside `/api/` are rejected.
+In CLI mode, a ZIP argument performs an exact lookup and must contain five digits; `lookup ZIPCODE` is the explicit form. The project commands map to the server's ZIP API: `search QUERY` and `autocomplete QUERY` accept multiword text, `nearby ZIPCODE [RADIUS_MILES]` accepts an optional radius, `city CITY` accepts a city name, `state STATE_ABBREVIATION` requires a two-letter state, and `stats`, `random`, and `dataset` take no arguments. User text is encoded into the URL. The `api` command accepts an HTTP method, a relative `/api/` path, and an optional JSON body. It sends the request to the configured server, uses the resolved Bearer token, and prints the response body (pretty-printed when it is JSON). Absolute URLs and paths outside `/api/` are rejected.
 
 ```sh
+zipcodes-cli lookup 90210
+zipcodes-cli search Los Angeles
+zipcodes-cli nearby 90210 25
+zipcodes-cli city Los Angeles
+zipcodes-cli state CA
+zipcodes-cli autocomplete Los
+zipcodes-cli stats
+zipcodes-cli random
+zipcodes-cli dataset
 zipcodes-cli api GET '/api/v2/zipcodes/search?q=Los%20Angeles&state=CA'
 zipcodes-cli api POST /api/v2/server/preferences '{"theme":"dark"}'
 ```
