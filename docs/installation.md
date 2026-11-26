@@ -25,7 +25,7 @@ The server initializes its SQLite database from the embedded dataset. It creates
 
 ## System service
 
-On a supported host, install and start the service with `sudo zipcodes --service --install`; then manage it through the host service manager or use `--service start`, `--service stop`, `--service restart`, and `--service reload`. Use `--service --disable` to stop and disable it, or `--service --uninstall` to remove it. Alternatively, create a service unit that runs the binary as a dedicated unprivileged account with writable configuration, data, and log directories. Set the listener address and port explicitly for deployment. Run `zipcodes --service --help` for platform-specific details.
+On a supported host, install a system service with `sudo zipcodes --service --install`; then manage it through the host service manager or use `--service start`, `--service stop`, `--service restart`, and `--service reload`. A non-root install on Linux with systemd creates a unit under `~/.config/systemd/user/`; on macOS it creates a LaunchAgent under `~/Library/LaunchAgents/`. These user services run as the calling account and cannot bind ports below 1024. User-service startup follows the user's login session; systemd lingering controls whether it survives logout. Use `--service --disable` to stop and disable the selected service, or `--service --uninstall` to remove it. Set the listener address and port explicitly for deployment. Run `zipcodes --service --help` for platform-specific details.
 
 ## CLI
 
