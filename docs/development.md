@@ -13,7 +13,7 @@ Use Docker and Make. Go builds and checks run in `casjaysdev/go:latest`; the rep
 
 ## Tests and static analysis
 
-`make test` runs `go vet`, `govulncheck`, Go tests with coverage, and the configured coverage threshold in the Go container. Use `make test E2E=1` for the Docker browser suite or `make test INCUS=1` for the systemd and OpenRC lifecycle matrix. These modes use the existing `tests/e2e.sh` and `tests/incus.sh` runners. `./tests/run_tests.sh` runs the Docker-based basic checks. The GitHub CI workflow also runs `staticcheck`, build, vulnerability, and secret scanning.
+`make test` runs `go vet`, `govulncheck`, Go tests with coverage, and the configured coverage threshold in the Go container. Use `make test E2E=1` for the Docker browser suite or `make test INCUS=1` for the systemd and OpenRC lifecycle matrix. Set `INCUS_MODE=systemd` or `INCUS_MODE=openrc` to run one service manager. These modes use the existing `tests/e2e.sh` and `tests/incus.sh` runners. `./tests/run_tests.sh` runs the Docker-based basic checks. The GitHub CI workflow also runs `staticcheck`, build, vulnerability, and secret scanning.
 
 ## Documentation
 
