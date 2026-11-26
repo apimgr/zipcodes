@@ -4,7 +4,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 
 | Setting | Default | Purpose |
 |---|---:|---|
-| `server.address` | `0.0.0.0` | Listener address |
+| `server.address` | `[::]` | Listener address; falls back to IPv4 wildcard when IPv6 is unavailable |
 | `server.port` | random unused port in `64000`–`64999`; `80` in an application container | Listener port; the chosen value is saved to `server.yml` |
 | `server.pidfile` | `true` | Create and validate the server PID file on startup; container runs skip PID files |
 | `server.daemonize` | `false` | Detach the server process from the terminal when daemonization is enabled for the start mode |
@@ -206,7 +206,7 @@ web:
     accent: ""
 ```
 
-Header and footer content accepts sanitized HTML. The about, privacy, and terms entries accept `html`, `md`, or `txt`; each body may be a single string or a language map with a `default` fallback. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, and `PORT` and `ADDRESS` override listener settings. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
+Header and footer content accepts sanitized HTML. The about, privacy, and terms entries accept `html`, `md`, or `txt`; each body may be a single string or a language map with a `default` fallback. `CONFIG_DIR`, `DATA_DIR`, and `LOGS_DIR` select the respective directories; `DB_PATH` overrides the SQLite database path, while `PORT` and `LISTEN` override the listener port and address. `DOMAIN` supplies a public host used when generating absolute URLs if `server.fqdn` is empty. Command-line flags also accept configuration, data, log, address, and port values. On Linux, root defaults are `/etc/apimgr/zipcodes`, `/var/lib/apimgr/zipcodes`, and `/var/log/apimgr/zipcodes`; a non-root process uses XDG paths. macOS and Windows use their standard application support/data directories.
 
 SQLite is the default. Its URL is a local path and defaults to `{data_dir}/db/server.db`; `DB_PATH` overrides it for local SQLite. SQLite uses separate read-only and single-writer pools, WAL, `synchronous=NORMAL`, and a 10 second busy timeout. Keep the database on local storage; network and FUSE filesystems are unsupported.
 
