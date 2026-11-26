@@ -104,7 +104,7 @@ With no command in an interactive terminal, a GUI-enabled build opens its GUI wh
 
 ## Configuration
 
-The server reads `server.yml`, ordered `yaml.d/` area files, and the separate `secrets.yml`. Run `zipcodes --maintenance backup` to create a verified archive, `zipcodes --maintenance backup test [file]` to check one without changing live files, and `zipcodes --maintenance restore <file>` to restore it. Backups include the server-owned application secrets required to restore project security keys; remote database contents remain provider-managed. See the [configuration reference](docs/configuration.md) for settings, environment variables, backups, and secret handling.
+The server reads `server.yml`, ordered `yaml.d/` area files, and the separate `secrets.yml`. Run `zipcodes --maintenance backup` to create a verified archive, `zipcodes --maintenance backup test [file]` to check one without changing live files, and `zipcodes --maintenance restore [file]` to restore it. When omitted, the restore and backup test select the full backup with the newest filename date, breaking ties by modification time. Backups include the server-owned application secrets required to restore project security keys; remote database contents remain provider-managed, with an optional local SQLite cache snapshot included when enabled. See the [configuration reference](docs/configuration.md) for settings, environment variables, backups, and secret handling.
 
 ## API
 
