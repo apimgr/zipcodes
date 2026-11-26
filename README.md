@@ -5,6 +5,8 @@
 [![License](https://img.shields.io/github/license/apimgr/zipcodes)](LICENSE.md)
 [![Documentation](https://readthedocs.org/projects/apimgr-zipcodes/badge/?version=latest)](https://apimgr-zipcodes.readthedocs.io/)
 
+## About
+
 Zipcodes is a public, read-only service for searching United States ZIP codes by code, city, state, or geographic distance. It provides a browser search page, REST and GraphQL APIs, optional caller GeoIP lookup, and a companion client.
 
 ## Features
@@ -16,9 +18,9 @@ Zipcodes is a public, read-only service for searching United States ZIP codes by
 - Companion CLI with interactive terminal mode and separate optional GUI builds.
 - Six embedded interface languages: English, Spanish, French, Arabic, German, and Italian.
 
-The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. The source does not provide telephone area codes, so `area_codes` is empty. See [LICENSE.md](LICENSE.md) for attribution.
+## Production
 
-## Install
+### Binary installation
 
 Download the latest release from [GitHub Releases](https://github.com/apimgr/zipcodes/releases/latest).
 
@@ -71,7 +73,11 @@ Download the matching executable from the release page and add its directory to 
 
 Download the matching binary, then run `chmod +x zipcodes-freebsd-*` before starting it.
 
-## Docker
+### System service
+
+On supported systems, install the service with `sudo zipcodes --service --install`. See the [installation guide](docs/installation.md#system-service) for service management and platform details.
+
+### Docker
 
 The production Compose file is `docker/docker-compose.yml`. It uses the published image and persists configuration, database, and logs under `docker/volumes/`.
 
@@ -81,7 +87,11 @@ docker compose -f docker/docker-compose.yml up -d
 
 The default host port is `172.17.0.1:64580`. See the [installation guide](docs/installation.md) before changing exposure or storage settings.
 
-## Client CLI
+### Server setup
+
+Run `zipcodes --help` for server options. On first start, the server creates its configuration and data files. Server configuration is operator-managed; the application has no web admin panel. See the [installation guide](docs/installation.md) to configure persistent directories.
+
+## Client
 
 Install the `zipcodes-cli` binary for your operating system and architecture from the same release page. Choose a server explicitly; this project does not define a hosted endpoint.
 
@@ -91,10 +101,6 @@ zipcodes-cli --server http://localhost:8080 api GET '/api/v1/zipcodes/nearby?zip
 ```
 
 With no command in an interactive terminal, a GUI-enabled build opens its GUI when a local display is available; otherwise the client opens its TUI. `--theme dark|light|auto` selects the terminal theme, and `--update check` or `--update yes` checks or installs a verified client update. Optional GUI builds are separate `zipcodes-cli-gui-{os}-{arch}` release files. See the [CLI reference](docs/cli.md) for options, configuration, and token use.
-
-## Server
-
-Run `zipcodes --help` for server options. On first start, the server creates its configuration and data files. Use the [installation guide](docs/installation.md) to configure persistent directories or install a system service. Server configuration is operator-managed; the application has no web admin panel.
 
 ## Configuration
 
@@ -108,6 +114,10 @@ The server reads `server.yml`, ordered `yaml.d/` area files, and the separate `s
 - Read-only ZIP search pages are available at `/` and `/search`.
 
 The project does not publish a hosted API URL. See the [API reference](docs/api.md), [security guide](docs/security.md), and [integrations guide](docs/integrations.md) for discovery, authentication, monitoring, and reporting details.
+
+## Other
+
+The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs curated-us-zips, pinned to `64ac28b620a39d9efabe39f91dc03181a13a8a76` and licensed CC BY 4.0. It excludes APO/FPO/DPO ZIPs. The source does not provide telephone area codes, so `area_codes` is empty. See [LICENSE.md](LICENSE.md) and [the dataset attribution file](data/licenses/zipcodes-data.md) for attribution and terms.
 
 ## Development
 
