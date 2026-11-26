@@ -79,13 +79,13 @@ On supported systems, install the service with `sudo zipcodes --service --instal
 
 ### Docker
 
-The production Compose file is `docker/docker-compose.yml`. It uses the published image and persists configuration, database, and logs under `docker/volumes/`.
+The production Compose file is `docker/docker-compose.yml`. It uses the published image and Docker-managed named volumes for configuration, database data, and logs.
 
 ```sh
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-The default host port is `172.17.0.1:64580`. See the [installation guide](docs/installation.md) before changing exposure or storage settings.
+The default host port is `172.17.0.1:64580`. `docker compose down` keeps the named volumes; removing a volume deletes its stored data. See the [installation guide](docs/installation.md) before changing exposure or storage settings.
 
 ### Server setup
 

@@ -2,14 +2,14 @@
 
 ## Docker Compose
 
-The production Compose file uses the published image and persists configuration, database data, and logs beneath `docker/volumes/`:
+The production Compose file uses the published image and Docker-managed named volumes for configuration, database data, and logs:
 
 ```sh
 docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml logs -f zipcodes
 ```
 
-The default host port is `172.17.0.1:64580`; change the `ports` mapping in the Compose file if that address is unavailable or the service should be exposed elsewhere. Review the bind address and firewall before exposing a public service. Stop it with `docker compose -f docker/docker-compose.yml down`.
+The default host port is `172.17.0.1:64580`; change the `ports` mapping in the Compose file if that address is unavailable or the service should be exposed elsewhere. Review the bind address and firewall before exposing a public service. Stop it with `docker compose -f docker/docker-compose.yml down`; this keeps the named volumes. Removing a volume also removes its stored data.
 
 ## Binary
 
