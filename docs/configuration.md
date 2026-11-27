@@ -56,7 +56,6 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.healthz.root.enabled` | `false` | Mount `/healthz` as a root-level alias to the `/server/healthz` frontend |
 | `server.tokens.max_linked` | `25` | Maximum active linked API tokens per owner; zero disables the limit |
 | `server.tokens.cookie_max_age` | `1y` | Lifetime of the owner-token browser cookie |
-| `server.tokens.idle_purge_days` | `0` | Reserved setting; currently accepted but has no effect |
 | `server.limits.max_body_size` | `10MB` | Maximum request body size |
 | `server.limits.read_timeout` | `30s` | HTTP read timeout |
 | `server.limits.write_timeout` | `30s` | HTTP and handler timeout |

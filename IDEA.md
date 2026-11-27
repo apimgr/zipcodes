@@ -44,7 +44,7 @@ The checked-in dataset comes from Ready APIs curated-us-zips at commit `64ac28b6
 
 ### Roles & permissions
 
-There are no end-user accounts or human roles in the product. Anonymous visitors may use public search and service information. Anonymous API credentials may be used for owner-scoped client features, but they do not create accounts, profiles, or login sessions. A server operator configures and maintains an instance without a web administration panel. ZIP lookup data and GeoIP responses are publicly readable; security report contents and operator maintenance data remain private to maintainers.
+There are no end-user accounts or human roles in the product. Anonymous visitors may use public search and service information. Anonymous API credentials may be used for owner-scoped client features, but they do not create accounts, profiles, or login sessions. A primary owner token has global owner scope; linked tokens default to read-write and may be created read-only, and neither scope changes the public, read-only ZIP data contract. A server operator configures and maintains an instance without a web administration panel. ZIP lookup data and GeoIP responses are publicly readable; security report contents and operator maintenance data remain private to maintainers.
 
 ### Data model & sensitivity
 
@@ -98,7 +98,7 @@ No product-specific exception to AI.md. Public ZIP and GeoIP lookups are read-on
 - `POST /api/{api_version}/server/preferences/tokens/primary`: no authentication; issue a new owner and primary token.
 - `POST /api/{api_version}/server/preferences/tokens/primary/reveal` and `POST /api/{api_version}/server/preferences/tokens/primary/rotate`: primary-token Bearer authentication; reveal or rotate the primary token.
 - `DELETE /api/{api_version}/server/preferences/tokens/primary`: primary-token Bearer authentication; revoke the owner and its resources.
-- `POST /api/{api_version}/server/preferences/tokens`: primary-token Bearer authentication; create a linked token.
+- `POST /api/{api_version}/server/preferences/tokens`: primary-token Bearer authentication; create a linked token with read or read-write scope (read-write by default).
 - `POST /api/{api_version}/server/preferences/tokens/{id}/reveal` and `POST /api/{api_version}/server/preferences/tokens/{id}/rotate`: primary-token Bearer authentication; reveal or rotate a linked token.
 - `PATCH /api/{api_version}/server/preferences/tokens/{id}`: primary-token Bearer authentication; rename a linked token or change its expiry.
 - `DELETE /api/{api_version}/server/preferences/tokens/{id}`: primary-token Bearer authentication; revoke a linked token.
