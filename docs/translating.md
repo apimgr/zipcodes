@@ -30,7 +30,7 @@ The required plural categories for the current catalog set are:
 
 Use a consistent, neutral register. Follow the language's punctuation and typography conventions, including French spacing before punctuation where required. Keep product and brand names, protocol and technology names, code, file names, configuration keys, URLs, and literal values users enter (such as `dark` and `auto`) untranslated.
 
-Translate complete sentences and messages, not sentence fragments intended to be joined together. Keep the license-required attribution text and link text intact. The service worker's English offline fallback is used only before a page has saved translated offline strings; it is not a substitute for translating the normal interface.
+Translate complete sentences and messages, not sentence fragments intended to be joined together. Keep the license-required attribution text and link text intact. The service worker's English offline fallback is used only before a page has saved translated offline strings; keep the offline title, heading, message, and reload label synchronized in every locale.
 
 ## Glossary
 

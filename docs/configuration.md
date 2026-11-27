@@ -34,6 +34,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.i2p.signature_type` | `7` | SAM destination signature type |
 | `server.i2p.bootstrap_timeout` | `300` | SAM session bootstrap timeout in seconds, from 30 to 600 |
 | `server.mode` | `production` | Application mode; overridden by `MODE`, then `--mode` |
+| `lang` | empty (system locale detection) | Output language for server startup and command messages; `--lang` overrides this setting |
 | `server.database.driver` | `sqlite` | Database backend: `sqlite`/`sqlite2`/`sqlite3` or remote `libsql`/`turso` |
 | `server.database.url` | `{data_dir}/db/server.db` | SQLite path, or `libsql://`/`https://` remote connection URL; private-network `http://` is allowed only for loopback/private hosts; credential URLs belong in `secrets.yml` |
 | `server.database.pool.max_open` | `25` | Maximum pooled database connections (SQLite read pool; remote pool) |
@@ -129,6 +130,9 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.scheduler.tasks.update_check.schedule` | `0 6 * * *` | Daily update check schedule |
 | `server.notifications.database_error.failures` | `3` | Consecutive database probe failures before notification |
 | `server.notifications.database_error.repeat` | `24h` | Minimum repeat interval while the database remains unavailable |
+| `server.notifications.webui.position` | `top-right` | Toast placement: `top-right`, `top-left`, `bottom-right`, or `bottom-left` |
+| `server.notifications.webui.duration` | `3` | Seconds before success and info toasts dismiss; `0` keeps them visible until dismissed |
+| `server.notifications.webui.warning_duration` | `5` | Seconds before warning toasts dismiss; `0` keeps them visible until dismissed |
 | `server.notifications.disk_low.enabled` | `true` | Enables disk threshold checks and notifications |
 | `server.notifications.disk_low.threshold_percent` | `85` | Used-space percentage that triggers a disk warning |
 | `server.notifications.disk_low.repeat` | `24h` | Minimum repeat interval while a volume remains above threshold |

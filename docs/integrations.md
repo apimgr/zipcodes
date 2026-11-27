@@ -18,7 +18,7 @@ The project does not provide identity federation, user accounts, native app asso
 
 ## I2P eepsite
 
-`server.i2p.enabled` controls the optional I2P eepsite. It defaults on in containers and off elsewhere; an explicit `--i2p` or `--i2p=false` takes precedence over `I2P_ENABLED`, which takes precedence over `server.yml`. When enabled, the server prefers a dedicated i2pd process and otherwise uses a reachable SAMv3 bridge. The destination key is stored under `{data_dir}/i2p/site/site-keys.dat` with private permissions, and the `.b32.i2p` address remains stable across restarts. I2P forwarding uses a separate loopback backend listener and does not add a PROXY header. Runtime state is exposed by the server health response; see [configuration](configuration.md#configuration) for the settings and limits.
+`server.i2p.enabled` controls the optional I2P eepsite. It defaults on in containers and off elsewhere; an explicit `--i2p` or `--i2p=false` takes precedence over `I2P_ENABLED`, which takes precedence over `server.yml`. When enabled, the server prefers a dedicated i2pd process and otherwise uses a reachable SAMv3 bridge. The private destination key is stored under `{data_dir}/i2p/site/site-keys.dat` with mode `0600`; the public `.b32.i2p` address is stored separately in `{data_dir}/i2p/site/hostname` and remains stable across restarts. I2P forwarding uses a separate loopback backend listener and does not add a PROXY header. Runtime state is exposed by the server health response; see [configuration](configuration.md#configuration) for the settings and limits.
 
 ## Tor hidden service
 
