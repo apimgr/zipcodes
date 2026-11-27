@@ -139,8 +139,20 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
-| `server.logging.access_format` | `apache` | Reserved setting; currently has no effect |
-| `server.logging.level` | `info` | Reserved setting; currently has no effect |
+| `server.logging.level` | mode-based | Minimum server log level: `debug`, `info`, `warn`, or `error`; empty follows the runtime mode |
+| `server.logging.defaults.rotate` | `weekly,50MB` | Rotation schedule and size threshold inherited by log kinds that do not override it |
+| `server.logging.defaults.keep` | `none` | Retention inherited by log kinds; supports `none`, a count, days (`Nd`), weeks (`Nw`), months (`Nm`), or `forever` |
+| `server.logging.access.format` | `apache` | Access log format: `apache`, `nginx`, `json`, or `custom` |
+| `server.logging.access.rotate` | `monthly` | Access log rotation policy |
+| `server.logging.server.format` | `text` | Application event format: `text` or `json` |
+| `server.logging.error.format` | `text` | Error event format: `text` or `json` |
+| `server.logging.audit.enabled` | `true` | Enables the machine-readable audit log file |
+| `server.logging.audit.format` | `json` | Audit log format; JSON Lines is required |
+| `server.logging.audit.rotate` | `daily` | Audit log rotation policy |
+| `server.logging.audit.compress` | `false` | Compress retained audit rotations |
+| `server.logging.security.format` | `fail2ban` | Security event format: `fail2ban`, `syslog`, `cef`, `json`, or `text` |
+| `server.logging.debug.enabled` | `false` | Enables the development/debug log file |
+| `server.logging.debug.format` | `text` | Debug log format: `text` or `json` |
 | `server.cors.allowed_origins` | `[*]` | Allowed browser origins; `[*]` permits any origin without credential headers, and `[""]` disables CORS |
 | `server.cors.allow_credentials` | `true` | Allow credential headers only for explicitly matched origins |
 | `server.cors.max_age` | `86400` | Preflight cache lifetime in seconds |
