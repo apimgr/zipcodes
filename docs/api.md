@@ -81,7 +81,7 @@ Preference export/import is available at `/server/preferences/sync` and `/server
 
 ## Owner tokens
 
-Owner tokens identify an anonymous owner; they do not create user accounts. The primary token can manage linked tokens. Linked tokens have the same owner scope but cannot manage tokens. API token routes accept a primary owner token in `Authorization: Bearer …`; cookies are not used for these API routes. The web token page uses the owner cookie and CSRF-protected POST forms.
+Owner tokens identify an anonymous owner; they do not create user accounts. The primary token can manage linked tokens. Linked tokens have the same owner scope but cannot manage tokens. API token routes accept a primary owner token in `Authorization: Bearer …`; cookies are not used for these API routes. The web token page uses the owner cookie and CSRF-protected POST forms, renders without JavaScript, and localizes its controls in English, Spanish, French, German, Arabic, and Italian.
 
 The server-rendered token page supports these form actions:
 
