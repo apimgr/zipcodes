@@ -139,20 +139,25 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.maintenance.cleanup.disk_threshold` | `90` | Skip scheduled backups when disk use exceeds this percentage |
 | `server.metrics.duration_buckets` | `[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]` | Prometheus request duration histogram buckets in seconds |
 | `server.metrics.size_buckets` | `[100, 1000, 10000, 100000, 1000000, 10000000]` | Prometheus request and response size histogram buckets in bytes |
-| `server.logging.level` | mode-based | Minimum server log level: `debug`, `info`, `warn`, or `error`; empty follows the runtime mode |
-| `server.logging.defaults.rotate` | `weekly,50MB` | Rotation schedule and size threshold inherited by log kinds that do not override it |
-| `server.logging.defaults.keep` | `none` | Retention inherited by log kinds; supports `none`, a count, days (`Nd`), weeks (`Nw`), months (`Nm`), or `forever` |
-| `server.logging.access.format` | `apache` | Access log format: `apache`, `nginx`, `json`, or `custom` |
-| `server.logging.access.rotate` | `monthly` | Access log rotation policy |
-| `server.logging.server.format` | `text` | Application event format: `text` or `json` |
-| `server.logging.error.format` | `text` | Error event format: `text` or `json` |
-| `server.logging.audit.enabled` | `true` | Enables the machine-readable audit log file |
-| `server.logging.audit.format` | `json` | Audit log format; JSON Lines is required |
-| `server.logging.audit.rotate` | `daily` | Audit log rotation policy |
-| `server.logging.audit.compress` | `false` | Compress retained audit rotations |
-| `server.logging.security.format` | `fail2ban` | Security event format: `fail2ban`, `syslog`, `cef`, `json`, or `text` |
-| `server.logging.debug.enabled` | `false` | Enables the development/debug log file |
-| `server.logging.debug.format` | `text` | Debug log format: `text` or `json` |
+| `server.logs.level` | mode-based | Minimum server log level: `debug`, `info`, `warn`, or `error`; empty follows the runtime mode |
+| `server.logs.defaults.rotate` | `weekly,50MB` | Rotation schedule and size threshold inherited by log kinds that do not override it |
+| `server.logs.defaults.keep` | `none` | Retention inherited by log kinds; supports `none`, a count, days (`Nd`), weeks (`Nw`), months (`Nm`), or `forever` |
+| `server.logs.defaults.custom` | empty | Custom access format string used when access format is `custom` |
+| `server.logs.{access,server,error,audit,security,debug}.filename` | `{kind}.log` | Log file name, restricted to a basename within the log directory |
+| `server.logs.{kind}.rotate` / `server.logs.{kind}.keep` | inherited | Per-file rotation (`never`, daily/weekly/monthly/yearly, size, or combined) and retention policy |
+| `server.logs.access.format` | `apache` | Access log format: `apache`, `nginx`, `json`, or `custom` |
+| `server.logs.access.rotate` | `monthly` | Access log rotation policy |
+| `server.logs.server.format` | `text` | Application event format: `text` or `json` |
+| `server.logs.error.format` | `text` | Error event format: `text` or `json` |
+| `server.logs.audit.enabled` | `true` | Enables the machine-readable audit log file |
+| `server.logs.audit.format` | `json` | Audit log format; JSON Lines is required |
+| `server.logs.audit.rotate` | `daily` | Audit log rotation policy |
+| `server.logs.audit.compress` | `false` | Compress retained audit rotations |
+| `server.logs.audit.events.{configuration,security,backup,server}` | `true` | Selects which event groups are written to `audit.log` |
+| `server.logs.audit.include_user_agent` | `true` | Includes a sanitized user agent when an audit event supplies one |
+| `server.logs.security.format` | `fail2ban` | Security event format: `fail2ban`, `syslog`, `cef`, `json`, or `text` |
+| `server.logs.debug.enabled` | `false` | Enables the development/debug log file |
+| `server.logs.debug.format` | `text` | Debug log format: `text` or `json` |
 | `server.cors.allowed_origins` | `[*]` | Allowed browser origins; `[*]` permits any origin without credential headers, and `[""]` disables CORS |
 | `server.cors.allow_credentials` | `true` | Allow credential headers only for explicitly matched origins |
 | `server.cors.max_age` | `86400` | Preflight cache lifetime in seconds |
@@ -240,3 +245,7 @@ Retention is applied at startup and after backups. The daily backup scheduler de
 Server configuration is operator-controlled through files and command-line options. Visitor theme and language preferences are managed by the server preferences pages and consent rules in AI.md. The CLI client has a separate per-user `cli.yml` with `server.primary`, `display.mode` (`auto` by default), and `theme.mode` (`auto` by default). Its display mode is detected from the environment; the client does not provide a `--tui` mode flag.
 
 Rate limiting is always active; its request and window limits are configurable, but there is no `enabled` switch. Valid bearer tokens use token-specific buckets, while unauthenticated or invalid-token requests use the client IP. Repeated failed bearer authentication locks out the IP for the configured window, even if a later request uses a valid token. Sensitive token actions have a separate strict limit. Counters use SQLite by default. Optional Valkey/Redis backends are selected with `server.cache.type` and either `server.cache.url` or host/port settings; credential-bearing URLs and passwords are stored in `secrets.yml`. A configured but unreachable external cache falls back to in-process sliding-window counters and reports `checks.cache: degraded` in health responses. `CACHE_URL` initializes the saved cache connection on first run only. The default database path is `db/server.db` beneath the data directory. `server.tokens.cookie_max_age` accepts a Go duration such as `24h` or `1y`; the latter is treated as 365 days. GeoIP is fail-open: missing lookup data and private/internal addresses do not block requests. Country restrictions are disabled by default and, when configured, run after per-IP rate limiting as a deny-only signal; they never replace authentication or authorization. Presets only reuse operator-authored lists and are not applied automatically. See [Security](security.md).
+
+## Logs
+
+The files are written under the runtime log directory: `access.log`, `server.log`, `error.log`, `audit.log`, `security.log`, and the opt-in `debug.log`. Successful health checks never enter the access log, regardless of the configured log level; failed health checks remain visible in access and error output. Logs contain plain ASCII lines without terminal color or control codes. Audit events are JSON Lines with a SHA-256 predecessor chain; `audit.anchor` preserves the chain head when retention removes rotated audit files. Rotation is built in, so no external `logrotate` configuration is required. The old `server.logging.*` names are migrated to `server.logs.*` at startup.
