@@ -3,9 +3,11 @@
 `zipcodes-cli` performs ZIP lookups and can invoke any API route on the configured server. The server address is selected in this order: `--server`, `ZIPCODES_SERVER_PRIMARY`, then `server.primary` in `cli.yml`.
 
 ```sh
-zipcodes-cli --server https://example.invalid 90210
-zipcodes-cli --server https://example.invalid api GET /api/v2/zipcodes/90210
+zipcodes-cli --server https://YOUR_SERVER 90210
+zipcodes-cli --server https://YOUR_SERVER api GET /api/v2/zipcodes/90210
 ```
+
+Replace `https://YOUR_SERVER` with the URL of the server you operate; this project does not provide a hosted endpoint.
 
 The client stores `cli.yml` under the operating system's per-user configuration directory in `apimgr/zipcodes/`. When `--server` is used and no primary server is already configured, that address is saved there. The URL must be absolute HTTP or HTTPS and must not contain credentials. This project does not define a hosted API endpoint.
 
@@ -51,12 +53,12 @@ zipcodes-cli api POST /api/v2/server/preferences '{"theme":"dark"}'
 For example, an exact lookup can still be run directly:
 
 ```sh
-zipcodes-cli --server http://localhost:8080 90210
+zipcodes-cli --server https://YOUR_SERVER 90210
 ```
 
 The client stores `cli.yml` under the per-user `apimgr/zipcodes/` configuration directory with mode `0600` on Unix. Use `--config NAME` for a profile in that directory (`dev` resolves to an existing `dev.yml` or `dev.yaml`), or supply a path. It reads top-level `lang`, `server.primary`, `auth.token`, `auth.token_file`, `display.mode` (`auto` by default), `theme.mode` (`auto` by default), `output.format` (`table` by default), and the debug/color defaults. Token priority is `--token`, `--token-file`, `ZIPCODES_TOKEN`, `auth.token_file`, then `auth.token`; environment and flag values are not saved. The resolved language is sent in `Accept-Language` on autodiscovery, auth checks, lookups, API calls, and binary updates. A valid `--server` value is saved only when the stored value is empty or invalid. A `--token` is validated against `/api/{api_version}/server/auth/check`, sent as a Bearer token, and saved only when the stored token is empty or invalid. First-run setup in GUI, TUI, and inline prompts tests the server URL and optional token, then offers Save to configuration and Set as default server. Saving writes `server.primary` and `auth.token` to the selected config; Set as default also writes them to the default `cli.yml` when `--config` selects a profile. With saving unchecked, neither config is written. The GUI additionally offers per-user automatic login startup for Linux, macOS, and Windows. TUI and inline setup remain available in terminal sessions.
 
-Lookup output precedence is `--output`, `ZIPCODES_OUTPUT_FORMAT`, `output.format`, then `table`. The available formats are `table`, `json`, and `plain`. For example, `zipcodes-cli --server https://example.invalid --output json 90210` prints the server's ZIP record as JSON.
+Lookup output precedence is `--output`, `ZIPCODES_OUTPUT_FORMAT`, `output.format`, then `table`. The available formats are `table`, `json`, and `plain`. For example, `zipcodes-cli --server https://YOUR_SERVER --output json 90210` prints the server's ZIP record as JSON.
 
 At startup, the client reads autodiscovery and checks the current platform against the server's published version and SHA-256. Interactive runs prompt before an available update; use `--update check` to report status or `--update yes` to download, verify, replace, and restart the CLI. A client below `server.update.cli_min_version` refuses ordinary requests and prints the required update command. The server must have the release binary, `version.txt`, and matching `sha256.txt` provisioned in its CLI directory; see the [API reference](api.md#autodiscovery).
 
@@ -77,6 +79,8 @@ As root, service installation configures the detected system service. A non-root
 `zipcodes --maintenance security list [--status STATUS]` lists security-report metadata without report contents. `show TRACKING_ID` displays metadata, the CVE request flag, the researcher comment, and disclosure date, but never the report body. Maintainers initiate CVE assignment after triage when requested. `export TRACKING_ID [--output FILE]` writes the already encrypted report body to a mode-`0600` file named `TRACKING_ID.asc` by default; `--output -` writes the encrypted bytes to standard output. `update TRACKING_ID` accepts `--status`, `--comment`, `--disclosure-date YYYY-MM-DD`, and `--severity`; status can only move forward or to `wont_fix`. These actions require root or interactive operator-token confirmation. A status change sends a status-only notice when SMTP passes its relay check and an encrypted contact record exists; the notice is encrypted with the researcher's submitted OpenPGP key when available.
 
 `zipcodes --maintenance pgp generate` creates a two-year Ed25519/Curve25519 project keypair and stores its private key encrypted under the database `installation_secret`. Generation publishes to configured keyservers. `rotate` stages a replacement key, re-encrypts all retained PGP security reports in one database transaction, then atomically activates the new key; startup recovery resolves an interrupted rotation before accepting submissions. The previous encrypted private key is retained for 30 days for reports already in transit. `export public [FILE]` prints or writes the public key. `export private FILE` requires typing `EXPORT PRIVATE KEY` and entering a reason; operators authorized by `server.token` re-enter the token, while root does not. Exports are limited to one per hour per OS user and written mode `0600`; the audit event records the OS username, `local` operator IP, and reason. `import FILE` imports an armored private key when no project key exists and requires typing `IMPORT KEY`; an identity mismatch requires a separate `IMPORT MISMATCH` confirmation. `publish` submits the current public key to configured keyservers; due failures retry on the 15-minute `keyserver_retry` task, up to eight attempts. `delete` requires typing `DELETE KEY`, removes both keys, records a revocation state, and disables public-key publication.
+
+`zipcodes --maintenance scheduler list`, `show TASK`, and `history TASK` inspect persisted task state. `run TASK` executes the task synchronously in the CLI process using the same task implementation and shared database lock as the server, so it cannot overlap a live run. `enable TASK` and `disable TASK` write the task's `enabled` setting to `yaml.d/maintenance.yml`; the running server applies it on configuration reload. These commands require root or interactive operator-token confirmation. There is no public scheduler API; the debug-only internal `GET /debug/scheduler` endpoint is available only in debug mode.
 
 `zipcodes --maintenance backup test [file]` verifies the named archive or, when omitted, verifies the full backup selected by filename date and modification-time tie-break. `zipcodes --maintenance restore [file]` restores the named archive or selects the same newest full backup when omitted. A restore from an incremental archive must name that archive explicitly.
 

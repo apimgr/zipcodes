@@ -28,7 +28,7 @@ Responses include content-type, framing, referrer, content-security, cross-origi
 
 ## TLS certificates
 
-When TLS is enabled, the server selects certificates from the configured certificate files, the system Let's Encrypt directories, the app-managed `{config_dir}/ssl/letsencrypt/{fqdn}/` directory, then `{config_dir}/ssl/local/{fqdn}/`. Certificates must be readable, unexpired, and match the configured host. Only app-managed Let's Encrypt certificates renew automatically when 30 days or fewer remain; system and local certificates remain operator-managed. HTTP-01 and TLS-ALPN-01 use the server's existing HTTP and HTTPS listeners. DNS-01 supports lego providers; provider credentials are encrypted at rest with the server encryption key, and values are never logged or returned. See [configuration](configuration.md) for setup details.
+When TLS is enabled, the server selects certificates from the configured certificate files, the system Let's Encrypt directories, the app-managed `{config_dir}/ssl/letsencrypt/{fqdn}/` directory, then `{config_dir}/ssl/local/{fqdn}/`. Certificates must be readable, unexpired, and match the configured host. Only app-managed Let's Encrypt certificates renew automatically when 30 days or fewer remain; system and local certificates remain operator-managed. HTTP-01 and TLS-ALPN-01 use the server's existing HTTP and HTTPS listeners. DNS-01 supports every lego DNS provider; its flat provider credential map is encrypted into `secrets.yml` with the server encryption key and is never logged or returned. See [configuration](configuration.md#tls-and-lets-encrypt) for challenge, listener, certificate-selection, and credential setup details.
 
 ## Vulnerability reporting
 

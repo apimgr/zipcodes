@@ -33,6 +33,15 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.i2p.inbound_quantity`, `server.i2p.outbound_quantity` | `5` | Parallel I2P tunnels, each from 1 to 16 |
 | `server.i2p.signature_type` | `7` | SAM destination signature type |
 | `server.i2p.bootstrap_timeout` | `300` | SAM session bootstrap timeout in seconds, from 30 to 600 |
+| `server.ssl.enabled` | `false` | Enables the HTTPS listener and certificate selection |
+| `server.ssl.cert` / `server.ssl.key` | auto-selected | Optional explicit certificate and private-key paths; otherwise certificates are selected from system Let's Encrypt, app-managed Let's Encrypt, and local certificate directories |
+| `server.ssl.min_version` | `TLS1.2` | Minimum TLS protocol version: `TLS1.2` or `TLS1.3` |
+| `server.ssl.letsencrypt.enabled` | `false` | Enables app-managed ACME issuance and renewal |
+| `server.ssl.letsencrypt.email` | empty | Contact email registered with the ACME provider |
+| `server.ssl.letsencrypt.challenge` | `http-01` | ACME challenge: `http-01`, `tls-alpn-01`, or `dns-01`; HTTP-01 and TLS-ALPN-01 use the existing server listeners |
+| `server.ssl.letsencrypt.staging` | `false` | Uses the Let's Encrypt staging directory for test issuance |
+| `server.ssl.letsencrypt.dns_provider` | empty | lego DNS provider name; required for `dns-01` |
+| `server.ssl.letsencrypt.dns_credentials` | `{}` | Flat map of provider environment-variable names to values; values are encrypted in `secrets.yml` with the server encryption key |
 | `server.mode` | `production` | Application mode; overridden by `MODE`, then `--mode` |
 | `lang` | empty (system locale detection) | Output language for server startup and command messages; `--lang` overrides this setting |
 | `server.database.driver` | `sqlite` | Database backend: `sqlite`/`sqlite2`/`sqlite3` or remote `libsql`/`turso` |
@@ -82,6 +91,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `data.trivy.source` | `ghcr.io/aquasecurity/trivy-db:2` | OCI reference for the Trivy database |
 | `server.security.reports.retention_days` | `365` | Days to retain closed security reports; open reports are never purged |
 | `server.trusted_proxies.additional` | `[]` | Additional proxy IPs/CIDRs whose forwarding headers are trusted |
+| `server.trusted_proxies.client_ip_header` | `auto` | Client IP header selection: `auto` or one pinned supported proxy header; chains are resolved from the nearest proxy toward the client |
 | `server.rate_limit.read.requests` | `120` | Read requests per IP, or per valid token, per window |
 | `server.rate_limit.read.window` | `60` | Read window in seconds |
 | `server.rate_limit.write.requests` | `10` | Write requests per IP, or per valid token, per window |
@@ -112,6 +122,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.restore.max_ratio` | `100` | Maximum expanded-to-compressed ratio |
 | `server.scheduler.timezone` | `America/New_York` | IANA timezone used by scheduled tasks |
 | `server.scheduler.catch_up_window` | `1h` | Maximum age of a missed scheduled run to execute on startup |
+| `server.scheduler.tasks.{id}.timeout` | `1h` | Maximum expected runtime; stale-lock leases are twice this value and never shorter than 10 minutes |
 | `server.scheduler.tasks.geoip_update.schedule` | `0 3 * * 0` | Weekly GeoIP refresh schedule |
 | `server.scheduler.tasks.blocklist_update.schedule` | `0 4 * * *` | Daily blocklist source refresh |
 | `server.scheduler.tasks.cve_update.schedule` | `0 5 * * *` | Daily NVD and optional Trivy refresh |
@@ -211,6 +222,12 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
 
 The in-process scheduler is always active. Schedules accept five-field cron expressions, `@hourly`, `@daily`, `@weekly`, `@monthly`, and `@every` durations of ten seconds or longer. Task definitions and run history are stored in `server.db`; the scheduler uses the configured IANA timezone and runs a missed task on startup only while it remains within `catch_up_window`. The critical log-rotation, security-cleanup, keyserver-retry, token-cleanup, and self-health tasks remain active even if an `enabled: false` value is present. The `database_check` probes both database connections, and `disk_check` measures the volumes containing the data, log, and backup directories.
+
+### TLS and Let's Encrypt
+
+TLS listener settings (`enabled`, `cert`, `key`, and `min_version`) require a restart when changed. The TLS minimum defaults to TLS 1.2 and accepts TLS 1.3 as the other supported value. When explicit certificate paths are empty, the server selects a matching certificate from `/etc/letsencrypt/live/domain/`, `/etc/letsencrypt/live/{fqdn}/`, `{config_dir}/ssl/letsencrypt/{fqdn}/`, then `{config_dir}/ssl/local/{fqdn}/`. System and local certificates remain operator-managed; only app-managed Let's Encrypt certificates renew automatically, when 30 days or fewer remain.
+
+Let's Encrypt settings are read when the ACME client issues or renews a certificate and apply without restarting the TLS listener. HTTP-01 requires the existing HTTP listener to be reachable on port 80, and TLS-ALPN-01 requires the existing HTTPS listener on port 443; the app never opens a separate challenge socket. Use `server.port: "80,443"` or an appropriately forwarding reverse proxy, or select DNS-01 when those listener requirements do not fit. DNS-01 accepts any lego provider. Put its flat provider credential map under `server.ssl.letsencrypt.dns_credentials`; the application encrypts values into `secrets.yml` and never logs or returns them. Provider field names and requirements come from [lego's DNS provider documentation](https://go-acme.github.io/lego/dns/).
 
 The server merges built-in defaults, `server.yml`, regular `yaml.d/*.yml` and `yaml.d/*.yaml` files in byte-wise filename order, then `secrets.yml`. Branding, SEO, and `web.ui` belong in `yaml.d/branding.yml`; other `web.*` settings and CORS belong in `yaml.d/web.yml`; rate limits and token policy belong in `yaml.d/security.yml`. Startup automatically splits area sections out of older `server.yml` files and preserves a `0600` backup. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. Example `yaml.d/branding.yml`:
 

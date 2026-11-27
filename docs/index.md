@@ -10,13 +10,15 @@ With Docker Compose:
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Open `http://172.17.0.1:64580/` on the Docker host. For a native Linux AMD64 run, download `zipcodes-linux-amd64`, then start it with `./zipcodes-linux-amd64 --address 127.0.0.1 --port 8080` and open `http://127.0.0.1:8080/`. The search page works without JavaScript. See the [installation guide](installation.md) for persistent storage and service setup.
+Open `http://172.17.0.1:64580/` on the Docker host. The search page works without JavaScript. See the [installation guide](installation.md) for binary installation, persistent storage, and service setup.
 
 The companion CLI connects to an explicitly configured server:
 
 ```sh
-zipcodes-cli --server http://127.0.0.1:8080 90210
+zipcodes-cli --server https://YOUR_SERVER 90210
 ```
+
+Replace `https://YOUR_SERVER` with the URL of the server you operate; this project does not provide a hosted endpoint.
 
 Run `zipcodes-cli` without arguments in an interactive terminal for repeated lookups. In scripts or non-interactive shells, provide one five-digit ZIP code.
 

@@ -6,15 +6,15 @@ Use Docker and Make. Go builds and checks run in `casjaysdev/go:latest`; the rep
 
 ## Build
 
-- `make dev` builds development binaries into a project-scoped temporary directory.
-- `make local` builds the server and CLI for the host platform under the gitignored `binaries/` directory.
-- `make build` cross-compiles the server and CLI for the supported OS/architecture matrix.
-- `make build BUILD_GUI=1` additionally creates separate GUI-tagged CLI binaries for Linux, macOS, and Windows. These optional binaries dynamically load platform graphics libraries; the default server, CLI, and TUI builds remain static and do not include GUI dependencies.
-- Builds and the test gate run `go generate ./src/swagger`. This regenerates `src/swagger/openapi.json` from the registered API routes and annotations before it is embedded in the server. Do not edit that generated file directly.
+- `make build` builds debug server and CLI binaries for the local platform and all eight supported OS/architecture combinations.
+- `make build BUILD_GUI=1` additionally creates separate GUI-tagged CLI binaries for Linux, macOS, and Windows on amd64 and arm64. These optional binaries dynamically load platform graphics libraries; the default server, CLI, and TUI builds remain static and do not include GUI dependencies.
+- `make release` builds stripped production binaries and release metadata in `releases/`; it does not publish a release.
+- `make docker` builds the local Docker image, and `make clean` removes the ignored build-output directories.
+- `make build`, `make release`, and `make test` run `go generate ./src/swagger` in the Go container. The basic Docker test runner also regenerates it before its direct server build. This regenerates `src/swagger/openapi.json` from registered API routes and annotations before compilation and checks. Do not edit that generated file directly.
 
 ## Tests and static analysis
 
-`make test` runs `go vet`, `govulncheck`, Go tests with coverage, and the configured coverage threshold in the Go container. Use `make test E2E=1` for the Docker browser suite or `make test INCUS=1` for the systemd and OpenRC lifecycle matrix. Set `INCUS_MODE=systemd` or `INCUS_MODE=openrc` to run one service manager. `SKIP_BUILD=1` reuses executable server and CLI binaries already present in `BINDIR`, which is useful when running both service-manager modes against one build. These modes use the existing `tests/e2e.sh` and `tests/incus.sh` runners. `./tests/run_tests.sh` runs the Docker-based basic checks. The GitHub CI workflow also runs `staticcheck`, build, vulnerability, and secret scanning.
+`make test` runs `go vet`, `staticcheck`, `govulncheck`, ShellCheck, `shfmt`, Go tests with coverage, and the configured coverage threshold in the Go container, then runs the basic Docker binary checks. Run the optional browser suite directly with `./tests/e2e.sh`. Run service lifecycle tests directly with `./tests/incus.sh [systemd|openrc|all]`; `INCUS_MODE=systemd` or `INCUS_MODE=openrc` selects one service manager, and `SKIP_BUILD=1` reuses existing binaries in `BINDIR`. `./tests/run_tests.sh` runs only the basic Docker checks. The GitHub CI workflow also runs the configured build, vulnerability, and secret-scanning jobs.
 
 ## Documentation
 
