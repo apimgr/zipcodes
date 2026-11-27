@@ -70,6 +70,16 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.geoip.allow_countries` | `[]` | When nonempty, allow only these ISO country codes; takes precedence over `deny_countries` |
 | `server.geoip.presets` | `{}` | Operator-authored named ISO country lists; presets are never applied automatically |
 | `server.security.allowlist` | `[]` | Trusted IP/CIDR entries that bypass GeoIP country restrictions |
+| `server.security.blocklists.enabled` | `true` | Enables IP and domain blocklist checks |
+| `server.security.blocklists.auto_update` | `true` | Downloads enabled sources on the scheduled update task |
+| `server.security.blocklists.action` | `reject` | `reject` returns 403; `drop` closes blocked connections |
+| `server.security.blocklists.extra_sources` | `[]` | Additional HTTPS IP or domain feeds; the FireHOL IPv4 feed is built in |
+| `data.security_dir` | `{data_dir}/security` | Directory for downloaded security datasets |
+| `data.cve.source` | NVD API v2 | NVD endpoint; records are stored in `cve/nvd.json` |
+| `data.cve.api_key` | empty | Optional NVD key; kept in `secrets.yml` |
+| `data.cve.filter_by_cpe` | `false` | CPE filtering remains disabled until dependency mapping is reliable |
+| `data.trivy.enabled` | `false` | Enables the optional Trivy OCI database pull |
+| `data.trivy.source` | `ghcr.io/aquasecurity/trivy-db:2` | OCI reference for the Trivy database |
 | `server.security.reports.retention_days` | `365` | Days to retain closed security reports; open reports are never purged |
 | `server.trusted_proxies.additional` | `[]` | Additional proxy IPs/CIDRs whose forwarding headers are trusted |
 | `server.rate_limit.read.requests` | `120` | Read requests per IP, or per valid token, per window |
@@ -100,14 +110,30 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.restore.max_files` | `10000` | Maximum archive file count |
 | `server.restore.max_file_size` | `512M` | Maximum size of one extracted file |
 | `server.restore.max_ratio` | `100` | Maximum expanded-to-compressed ratio |
-| `server.scheduler.timezone` | `America/New_York` | IANA timezone used for scheduled backups |
+| `server.scheduler.timezone` | `America/New_York` | IANA timezone used by scheduled tasks |
 | `server.scheduler.catch_up_window` | `1h` | Maximum age of a missed scheduled run to execute on startup |
+| `server.scheduler.tasks.geoip_update.schedule` | `0 3 * * 0` | Weekly GeoIP refresh schedule |
+| `server.scheduler.tasks.blocklist_update.schedule` | `0 4 * * *` | Daily blocklist source refresh |
+| `server.scheduler.tasks.cve_update.schedule` | `0 5 * * *` | Daily NVD and optional Trivy refresh |
+| `server.scheduler.tasks.security_cleanup.schedule` | `30 3 * * *` | Closed security-report and retired PGP-key cleanup schedule |
+| `server.scheduler.tasks.keyserver_retry.schedule` | `@every 15m` | Retry schedule for due PGP keyserver submissions |
+| `server.scheduler.tasks.log_rotation.schedule` | `0 0 * * *` | Log rotation schedule; this task cannot be disabled |
+| `server.scheduler.tasks.token_cleanup.schedule` | `@every 15m` | Expired CAPTCHA and optional idle-owner cleanup schedule |
+| `server.scheduler.tasks.database_check.schedule` | `@every 1m` | Database connection probe cadence |
+| `server.scheduler.tasks.disk_check.schedule` | `@every 5m` | Disk usage notification cadence |
+| `server.scheduler.tasks.healthcheck_self.schedule` | `@every 5m` | Internal server health verification cadence |
 | `server.scheduler.tasks.backup_daily.enabled` | `true` | Enables the daily backup task |
 | `server.scheduler.tasks.backup_daily.schedule` | `0 2 * * *` | Daily backup schedule in the configured timezone |
 | `server.scheduler.tasks.backup_hourly.enabled` | `false` | Enables hourly incremental backups |
 | `server.scheduler.tasks.backup_hourly.schedule` | `@hourly` | Hourly incremental schedule |
 | `server.scheduler.tasks.update_check.enabled` | `true` | Enables the daily operator-only update check |
 | `server.scheduler.tasks.update_check.schedule` | `0 6 * * *` | Daily update check schedule |
+| `server.notifications.database_error.failures` | `3` | Consecutive database probe failures before notification |
+| `server.notifications.database_error.repeat` | `24h` | Minimum repeat interval while the database remains unavailable |
+| `server.notifications.disk_low.enabled` | `true` | Enables disk threshold checks and notifications |
+| `server.notifications.disk_low.threshold_percent` | `85` | Used-space percentage that triggers a disk warning |
+| `server.notifications.disk_low.repeat` | `24h` | Minimum repeat interval while a volume remains above threshold |
+| `server.tokens.idle_purge_days` | `0` | Optional age for purging idle anonymous owners with no owned resources; zero disables the purge |
 | `server.notifications.email.smtp.host` | autodetected | SMTP relay hostname or IP; an empty value triggers first-run detection |
 | `server.notifications.email.smtp.port` | `587` | SMTP relay port; automatic TLS uses implicit TLS on 465 and STARTTLS negotiation on other ports |
 | `server.notifications.email.smtp.username` | empty | SMTP username; AUTH is used only after TLS is established |
@@ -179,6 +205,8 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.branding.favicon` | empty | Optional HTTPS/data URI or asset filename used as the favicon |
 | `server.pages.help.content` | Project-specific help summary in Markdown | Appended to the server-rendered help page and returned as Markdown in its JSON API |
 | `server.pages.help.mcp` | Project-specific MCP tools and usage examples | Markdown shown in the MCP help page and JSON mirror |
+
+The in-process scheduler is always active. Schedules accept five-field cron expressions, `@hourly`, `@daily`, `@weekly`, `@monthly`, and `@every` durations of ten seconds or longer. Task definitions and run history are stored in `server.db`; the scheduler uses the configured IANA timezone and runs a missed task on startup only while it remains within `catch_up_window`. The critical log-rotation, security-cleanup, keyserver-retry, token-cleanup, and self-health tasks remain active even if an `enabled: false` value is present. The `database_check` probes both database connections, and `disk_check` measures the volumes containing the data, log, and backup directories.
 
 The server merges built-in defaults, `server.yml`, regular `yaml.d/*.yml` and `yaml.d/*.yaml` files in byte-wise filename order, then `secrets.yml`. Branding, SEO, and `web.ui` belong in `yaml.d/branding.yml`; other `web.*` settings and CORS belong in `yaml.d/web.yml`; rate limits and token policy belong in `yaml.d/security.yml`. Startup automatically splits area sections out of older `server.yml` files and preserves a `0600` backup. GeoIP data sources, database categories, storage location (`{data_dir}/security/geoip`), and weekly update schedule are fixed by the application; only the GeoIP enabled flag, country lists, and operator-authored presets are configurable. Example `yaml.d/branding.yml`:
 
