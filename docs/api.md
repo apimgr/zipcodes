@@ -94,7 +94,10 @@ The server-rendered token page supports these form actions:
 | POST | `/server/preferences/token/rotate` | Rotate the primary token |
 | POST | `/server/preferences/token/revoke` | Revoke the primary token and delete its owner |
 | POST | `/server/preferences/tokens` | Create a linked token |
-| POST | `/server/preferences/tokens/{id}/{action}` | Reveal, rotate, or revoke a linked token |
+| POST | `/server/preferences/tokens/{id}/reveal` | Reveal a linked token |
+| POST | `/server/preferences/tokens/{id}/rotate` | Rotate a linked token |
+| POST | `/server/preferences/tokens/{id}/update` | Rename a linked token or change its expiry |
+| POST | `/server/preferences/tokens/{id}/revoke` | Revoke a linked token |
 
 | Method | Route | Access | Purpose |
 |---|---|---|---|
@@ -107,7 +110,7 @@ The server-rendered token page supports these form actions:
 | POST | `/api/{api_version}/server/preferences/tokens` | Primary owner Bearer token; JSON `name` and optional `expiry` | Create a linked token |
 | POST | `/api/{api_version}/server/preferences/tokens/{id}/reveal` | Primary owner Bearer token | Reveal a linked token |
 | POST | `/api/{api_version}/server/preferences/tokens/{id}/rotate` | Primary owner Bearer token; JSON `confirm` must match the token's last four characters | Replace a linked token |
-| POST | `/api/{api_version}/server/preferences/tokens/{id}/update` | Primary owner Bearer token; JSON `name` and `expiry` | Rename a linked token or change its expiry |
+| PATCH | `/api/{api_version}/server/preferences/tokens/{id}` | Primary owner Bearer token; JSON `name` and `expiry` | Rename a linked token or change its expiry |
 | DELETE | `/api/{api_version}/server/preferences/tokens/{id}` | Primary owner Bearer token | Revoke a linked token |
 
 Linked-token expiry accepts `never`, `7d`, `30d`, `90d`, `1y`, or a future `YYYY-MM-DD` date. The default limit is 25 active linked tokens per owner. Raw token values are returned only by issue, reveal, and rotate actions; save them securely. The primary token may be restored in a browser from `/server/preferences/tokens`. Revoking the primary deletes the owner and its associated data; rotating it preserves the owner and linked tokens.

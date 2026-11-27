@@ -100,7 +100,7 @@ zipcodes-cli --server http://localhost:8080 90210
 zipcodes-cli --server http://localhost:8080 api GET '/api/v1/zipcodes/nearby?zip=90210&radius=10'
 ```
 
-With no command in an interactive terminal, a GUI-enabled build opens its GUI when a local display is available; otherwise the client opens its TUI. `--theme dark|light|auto` selects the terminal theme, and `--update check` or `--update yes` checks or installs a verified client update. Optional GUI builds are separate `zipcodes-cli-gui-{os}-{arch}` release files. See the [CLI reference](docs/cli.md) for options, configuration, and token use.
+With no command in an interactive terminal, a GUI-enabled build opens its GUI when a local display is available; otherwise the client opens its TUI. First-run setup can save the connection to the selected config and, for a named profile, copy it to the default config. The GUI also offers per-user automatic login startup. `--theme dark|light|auto` selects the terminal theme, and `--update check` or `--update yes` checks or installs a verified client update. Optional GUI builds are separate `zipcodes-cli-gui-{os}-{arch}` release files. See the [CLI reference](docs/cli.md) for options, configuration, and token use.
 
 ## Configuration
 
