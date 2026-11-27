@@ -1,6 +1,7 @@
 # Zipcodes
 
 [![CI](https://github.com/apimgr/zipcodes/actions/workflows/ci.yml/badge.svg)](https://github.com/apimgr/zipcodes/actions/workflows/ci.yml)
+[![Docs](https://readthedocs.org/projects/apimgr-zipcodes/badge/?version=latest)](https://apimgr-zipcodes.readthedocs.io)
 [![Release](https://img.shields.io/github/v/release/apimgr/zipcodes)](https://github.com/apimgr/zipcodes/releases)
 [![License](https://img.shields.io/github/license/apimgr/zipcodes)](LICENSE.md)
 
