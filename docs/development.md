@@ -10,6 +10,7 @@ Use Docker and Make. Go builds and checks run in `casjaysdev/go:latest`; the rep
 - `make local` builds the server and CLI for the host platform under the gitignored `binaries/` directory.
 - `make build` cross-compiles the server and CLI for the supported OS/architecture matrix.
 - `make build BUILD_GUI=1` additionally creates separate GUI-tagged CLI binaries for Linux, macOS, and Windows. These optional binaries dynamically load platform graphics libraries; the default server, CLI, and TUI builds remain static and do not include GUI dependencies.
+- Builds and the test gate run `go generate ./src/swagger`. This regenerates `src/swagger/openapi.json` from the registered API routes and annotations before it is embedded in the server. Do not edit that generated file directly.
 
 ## Tests and static analysis
 
@@ -33,4 +34,4 @@ Do not add guessed ZIP records or infer area codes from coordinates, states, or 
 
 ## Contributing
 
-Keep REST, GraphQL, OpenAPI, server-rendered pages, README, and `docs/` synchronized when an API or user-facing behavior changes. Add regression coverage for changed behavior, keep generated/build files out of commits, and review the complete diff before submitting a change.
+Keep REST, GraphQL, OpenAPI, server-rendered pages, README, and `docs/` synchronized when an API or user-facing behavior changes. Add regression coverage for changed behavior. Keep build outputs out of commits; commit `src/swagger/openapi.json` with source changes because it is the generated OpenAPI superset embedded in the server. Review the complete diff before submitting a change.
