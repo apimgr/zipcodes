@@ -8,10 +8,15 @@
 - Never place temporary test/build output in the source tree.
 
 ## CRITICAL - ALWAYS DO
-- Provide `dev`, `local`, `build`, `test`, `release`, and `docker` targets.
+- Provide exactly the six targets `build`, `test`, `release`, `docker`, `clean`, and `help`.
 - Build with the approved Docker Go image and CGO_ENABLED=0.
 - Inject version/build metadata and cross-compile all required platforms.
 - Keep temporary output under the project-scoped OS temp directory.
+
+## TARGETS
+- The help target is the default goal.
+- The build target creates the local debug binaries and all eight supported OS/architecture binaries in one Go Docker container.
+- Test scripts use the build target when a Makefile exists; never add a host-only `local` target.
 
 ## KEY DECISIONS
 | Question | Answer | Spec Reference |
