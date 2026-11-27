@@ -273,6 +273,6 @@ The embedded ZIP dataset is licensed separately under Creative Commons Attributi
 
 ## GeoIP data attribution
 
-City data is provided by [DB-IP](https://db-ip.com/) under CC BY 4.0.
+<a href="https://db-ip.com/">IP Geolocation by DB-IP</a>
 
 Country and ASN records are supplied by iptoasn.com under PDDL. City records are supplied by DB-IP under CC BY 4.0.
