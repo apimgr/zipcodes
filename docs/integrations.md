@@ -34,7 +34,7 @@ Webhook payloads contain event summaries only; they never contain report bodies 
 
 Webhook delivery runs asynchronously. Failed sends retry after 1 minute, 5 minutes, 15 minutes, 1 hour, 6 hours, and 24 hours, reusing the same delivery ID; after the final failure, the server logs `notify.webhook_failed` without printing the endpoint URL or signing secret.
 
-GeoIP database downloads are an optional feature used for caller/IP lookup. The server fetches the fixed ip-location-db assets over HTTPS into `{data_dir}/security/geoip` and verifies release SHA-256 checksums before replacement; an unavailable dataset leaves ZIP lookup functionality available and country restrictions fail open.
+GeoIP database downloads are an optional feature used for caller/IP lookup. The server fetches the fixed ip-location-db assets over HTTPS into `{data_dir}/security/geoip` and verifies release SHA-256 checksums before replacement. A mismatch retries the checksum and asset once; after a second mismatch, a sane live MMDB is kept, or a valid first-run MMDB may be installed as unverified and reported degraded. Failed and unverified updates do not advance the last-success timestamp. An unavailable dataset leaves ZIP lookup functionality available and country restrictions fail open.
 
 ## Email notifications
 
