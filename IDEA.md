@@ -93,3 +93,14 @@ No product-specific exception to AI.md. Public ZIP and GeoIP lookups are read-on
 - `GET /api/{api_version}/me`: no authentication; return the request's caller IP and available approximate GeoIP fields.
 - `GET /api/{api_version}/geoip?ip={address}` and `GET /api/{api_version}/geoip.txt?ip={address}`: no authentication; look up an IP and return available location data as JSON or plain text; private/reserved IPs are not geolocated.
 - `POST /api/{api_version}/geoip/batch`: no authentication; accept a JSON list of up to 100 IP addresses and return a corresponding bounded list of location results.
+- `GET /api/{api_version}/server/healthz.txt`: no authentication; return the health check in plain text.
+- `GET /api/{api_version}/server/preferences/tokens`: primary-token Bearer authentication; return masked primary and linked token metadata.
+- `POST /api/{api_version}/server/preferences/tokens/primary`: no authentication; issue a new owner and primary token.
+- `POST /api/{api_version}/server/preferences/tokens/primary/reveal` and `POST /api/{api_version}/server/preferences/tokens/primary/rotate`: primary-token Bearer authentication; reveal or rotate the primary token.
+- `DELETE /api/{api_version}/server/preferences/tokens/primary`: primary-token Bearer authentication; revoke the owner and its resources.
+- `POST /api/{api_version}/server/preferences/tokens`: primary-token Bearer authentication; create a linked token.
+- `POST /api/{api_version}/server/preferences/tokens/{id}/reveal` and `POST /api/{api_version}/server/preferences/tokens/{id}/rotate`: primary-token Bearer authentication; reveal or rotate a linked token.
+- `PATCH /api/{api_version}/server/preferences/tokens/{id}`: primary-token Bearer authentication; rename a linked token or change its expiry.
+- `DELETE /api/{api_version}/server/preferences/tokens/{id}`: primary-token Bearer authentication; revoke a linked token.
+- `GET /server/docs/graphql`: no authentication; render the GraphQL documentation and query form.
+- `POST /server/docs/graphql`: CSRF-protected no-JavaScript query form; execute a read-only GraphQL query and render the JSON result in the page.
