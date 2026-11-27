@@ -144,7 +144,7 @@ The server reads `server.yml` and the `yaml.d/` area files from its selected con
 | `server.logs.defaults.keep` | `none` | Retention inherited by log kinds; supports `none`, a count, days (`Nd`), weeks (`Nw`), months (`Nm`), or `forever` |
 | `server.logs.defaults.custom` | empty | Custom access format string used when access format is `custom` |
 | `server.logs.{access,server,error,audit,security,debug}.filename` | `{kind}.log` | Log file name, restricted to a basename within the log directory |
-| `server.logs.{kind}.rotate` / `server.logs.{kind}.keep` | inherited | Per-file rotation (`never`, daily/weekly/monthly/yearly, size, or combined) and retention policy |
+| `server.logs.{kind}.rotate` / `server.logs.{kind}.keep` | kind defaults, then inherited | Per-file rotation (`never`, daily/weekly/monthly/yearly, size, or combined) and retention policy |
 | `server.logs.access.format` | `apache` | Access log format: `apache`, `nginx`, `json`, or `custom` |
 | `server.logs.access.rotate` | `monthly` | Access log rotation policy |
 | `server.logs.server.format` | `text` | Application event format: `text` or `json` |
