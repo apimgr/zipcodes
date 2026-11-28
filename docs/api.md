@@ -112,7 +112,7 @@ The server-rendered token page supports these form actions:
 | POST | `/api/{api_version}/server/preferences/tokens` | Primary owner Bearer token; JSON `name`, optional `scope` (`read` or `read-write`, default `read-write`), and `expires` or `expires_on` | Create a linked token; `global` is rejected |
 | POST | `/api/{api_version}/server/preferences/tokens/{id}/reveal` | Primary owner Bearer token | Reveal a linked token |
 | POST | `/api/{api_version}/server/preferences/tokens/{id}/rotate` | Primary owner Bearer token; JSON `confirm` must match the token's last four characters | Replace a linked token |
-| PATCH | `/api/{api_version}/server/preferences/tokens/{id}` | Primary owner Bearer token; JSON `name` and `expiry` | Rename a linked token or change its expiry |
+| PATCH | `/api/{api_version}/server/preferences/tokens/{id}` | Primary owner Bearer token; JSON `name`, `expires` or `expires_on` (use at most one expiry field) | Rename a linked token or change its expiry |
 | DELETE | `/api/{api_version}/server/preferences/tokens/{id}` | Primary owner Bearer token | `200`; revoke a linked token |
 
 Linked-token expiry accepts `never`, `7d`, `30d`, `90d`, `1y`, or a future `YYYY-MM-DD` date through `expires_on`. The default limit is 25 active linked tokens per owner. Token objects include their scope; the primary reports `global`, while linked tokens report `read` or `read-write`. Scope cannot be changed after creation. Raw token values are returned only by issue, reveal, and rotate actions; save them securely. The primary token may be restored in a browser from `/server/preferences/tokens`. Revoking the primary deletes the owner and its associated data; rotating it preserves the owner and linked tokens.

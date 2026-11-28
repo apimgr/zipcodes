@@ -105,7 +105,7 @@ With no command in an interactive terminal, a GUI-enabled build opens its GUI wh
 
 ## Configuration
 
-The server reads `server.yml`, ordered `yaml.d/` area files, and the separate `secrets.yml`. Run `zipcodes --maintenance backup` to create a verified archive, `zipcodes --maintenance backup test [file]` to check one without changing live files, and `zipcodes --maintenance restore [file]` to restore it. When omitted, the restore and backup test select the full backup with the newest filename date, breaking ties by modification time. Backups include the server-owned application secrets required to restore project security keys; remote database contents remain provider-managed, with an optional local SQLite cache snapshot included when enabled. See the [configuration reference](docs/configuration.md) for settings, environment variables, backups, and secret handling.
+The server reads `server.yml`, ordered `yaml.d/` area files, and the separate `secrets.yml`. Run `zipcodes --maintenance backup` to create a verified archive, `zipcodes --maintenance backup test [file]` to check one without changing live files, and `zipcodes --maintenance restore [file]` to restore it. When omitted, the restore and backup test select the full backup with the newest filename date, breaking ties by modification time. Backups include the server-owned application secrets required to restore project security keys; remote database contents remain provider-managed, with an optional local SQLite cache snapshot included when enabled. Root or an operator-token holder can rotate `installation_secret` or the `secrets.yml` at-rest `encryption_key` with `zipcodes --maintenance secret rotate`. See the [configuration reference](docs/configuration.md) for settings, environment variables, backups, and secret handling.
 
 ## API
 
@@ -122,7 +122,7 @@ The checked-in dataset contains 33,100 geographic ZIP records from Ready APIs cu
 
 ## Development
 
-Builds and Go checks run in Docker using `casjaysdev/go:latest`; do not run Go tools on the host. Use `make build` for the eight server and CLI platform combinations, `make test` for tests, vet, vulnerability checking, and coverage, and `make build BUILD_GUI=1` for optional GUI client artifacts. See the [development guide](docs/development.md) for the other check scripts and dataset update process.
+Builds and Go checks run in Docker using `casjaysdev/go:latest`; do not run Go tools on the host. Use `make build` for the eight server and CLI platform combinations, `make test` for tests, vet, vulnerability checking, and coverage, and `make build BUILD_GUI=1` for optional GUI client artifacts. See the [development guide](docs/development.md) for the other check scripts and dataset update process. Contributors can use the [translation guide](docs/translating.md) to update one of the six supported languages.
 
 ## Disclaimer
 
