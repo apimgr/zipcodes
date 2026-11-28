@@ -90,6 +90,7 @@ No product-specific exception to AI.md. Public ZIP and GeoIP lookups are read-on
 - `GET /api/{api_version}/zipcodes/stats` and `GET /api/{api_version}/zipcodes/stats.txt`: no authentication; return dataset counts as JSON or plain text.
 - `GET /api/{api_version}/zipcodes/random` and `GET /api/{api_version}/zipcodes/random.txt`: no authentication; return one random record as JSON or plain text.
 - `GET /api/{api_version}/zipcodes.json`: no authentication; download the complete embedded ZIP dataset as JSON.
+- `GET /api/{api_version}/cli/binaries/{filename}`: public by default; stream a verified, operator-provisioned CLI release binary; require Bearer authentication when `server.cli.binary_download.require_auth` is enabled.
 - `GET /api/{api_version}/me`: no authentication; return the request's caller IP and available approximate GeoIP fields.
 - `GET /api/{api_version}/geoip?ip={address}` and `GET /api/{api_version}/geoip.txt?ip={address}`: no authentication; look up an IP and return available location data as JSON or plain text; private/reserved IPs are not geolocated.
 - `POST /api/{api_version}/geoip/batch`: no authentication; accept a JSON list of up to 100 IP addresses and return a corresponding bounded list of location results.
